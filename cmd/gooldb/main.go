@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/ctrl-alt-boop/gooldb/internal/app/gooldb"
-	"github.com/ctrl-alt-boop/gooldb/tui/terminal"
+	"github.com/ctrl-alt-boop/gooldb/tui"
 	"github.com/jroimartin/gocui"
 )
 
@@ -23,7 +23,7 @@ func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	log.Println("Hello")
-	tui := terminal.Create()
+	tui := tui.Create()
 	log.Println("Bello")
 
 	go func() {

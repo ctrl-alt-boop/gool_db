@@ -1,4 +1,4 @@
-package terminal
+package tui
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/ctrl-alt-boop/gooldb/internal/database"
+	"github.com/ctrl-alt-boop/gooldb/tui/managers"
 	"github.com/jroimartin/gocui"
 )
 
@@ -22,9 +23,19 @@ func Create() *Tui {
 		panic(err)
 	}
 
+	g.SetManager()
 	g.SetManagerFunc(func(g *gocui.Gui) error {
 		maxX, maxY := g.Size()
-		if view, err := g.SetView("table_list", 0, 0, maxX/5, maxY-7); err != nil {
+		if view, err := g.SetView("help", 0, maxY-2, maxX-1, maxY); err != nil {
+			if err != gocui.ErrUnknownView {
+				return err
+			}
+			view.Frame = false
+			view.Editable = false
+			fmt.Fprint(view, managers.App.GetHelpText())
+		}
+
+		if view, err := g.SetView("table_list", 0, 0, maxX/5, maxY-4); err != nil {
 			if err != gocui.ErrUnknownView {
 				return err
 			}
@@ -32,28 +43,20 @@ func Create() *Tui {
 			view.Frame = true
 			view.Editable = false
 		}
-		if view, err := g.SetView("main", maxX/5, 0, maxX-1, maxY-7); err != nil {
+		if view, err := g.SetView("main", maxX/5, 0, maxX-1, maxY-4); err != nil {
 			if err != gocui.ErrUnknownView {
 				return err
 			}
-			view.Title = "Gool"
+			view.Title = "gool_db"
 			view.Frame = true
 			view.Editable = false
-
-			fmt.Fprintf(view, "main\nmain\nmain\nmain\nmain\nmain\n")
 		}
-
-		if view, err := g.SetView("status_bar", 0, maxY-6, maxX-1, maxY-1); err != nil {
+		if view, err := g.SetView("status_bar", 0, maxY-4, maxX-1, maxY-2); err != nil {
 			if err != gocui.ErrUnknownView {
 				return err
 			}
 			view.Frame = true
 			view.Editable = false
-
-			// log.SetOutput(view)
-			// for range maxX - 1 {
-			// 	fmt.Fprint(view, SemiBlock)
-			// }
 		}
 
 		return nil
@@ -104,10 +107,6 @@ func (tui *Tui) onEnterPressed(g *gocui.Gui, v *gocui.View) error {
 	log.Println(strings.Join(names, ", "))
 	log.Println(strings.Join(types, ", "))
 	log.Println(strings.Join(dbTypes, ", "))
-
-	// log.Println(strings.Join(data.Columns, ", "))
-	// log.Println(strings.Join(data.ColumnDatabaseTypeStrings(), ", "))
-	// log.Println(strings.Join(data.ColumnTypeStrings(), ", "))
 
 	log.Println(table.GetRowString(0))
 

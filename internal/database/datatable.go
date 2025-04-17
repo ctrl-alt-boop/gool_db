@@ -18,16 +18,31 @@ type Column struct {
 
 type Row struct {
 	Values []any
-	//Types  []string
 }
 
 var DefaultColumnMaxWidth int = 12
 
 type DataTable struct {
-	Columns []Column
-	Rows    []Row
+	columns []Column
+	rows    []Row
 
 	ColumnMaxWidth int
+}
+
+func (dt *DataTable) NumColumns() int {
+	return len(dt.columns)
+}
+
+func (dt *DataTable) NumRows() int {
+	return len(dt.rows)
+}
+
+func (dt *DataTable) Columns() []Column {
+	return dt.columns
+}
+
+func (dt *DataTable) Rows() []Row {
+	return dt.rows
 }
 
 func CreateDataTable(columnTypes []*sql.ColumnType) *DataTable {
@@ -40,17 +55,17 @@ func CreateDataTable(columnTypes []*sql.ColumnType) *DataTable {
 	})
 
 	return &DataTable{
-		Columns:        columns,
-		Rows:           make([]Row, 0),
+		columns:        columns,
+		rows:           make([]Row, 0),
 		ColumnMaxWidth: DefaultColumnMaxWidth,
 	}
 }
 
 func (dt *DataTable) AddRow(rowScan func(dest ...any) error) error {
 	row := Row{
-		make([]any, len(dt.Columns)),
+		make([]any, len(dt.columns)),
 	}
-	scanArr := make([]any, len(dt.Columns))
+	scanArr := make([]any, len(dt.columns))
 	for i := range row.Values {
 		scanArr[i] = &row.Values[i]
 	}
@@ -60,14 +75,14 @@ func (dt *DataTable) AddRow(rowScan func(dest ...any) error) error {
 		return err
 	}
 
-	dt.Rows = append(dt.Rows, row)
+	dt.rows = append(dt.rows, row)
 	return nil
 }
 
 func (dt *DataTable) GetRowString(index int) string {
-	row := make([]string, len(dt.Columns))
-	for columnIndex, column := range dt.Columns {
-		rowValue := dt.Rows[index].Values[columnIndex]
+	row := make([]string, len(dt.columns))
+	for columnIndex, column := range dt.columns {
+		rowValue := dt.rows[index].Values[columnIndex]
 		switch value := rowValue.(type) {
 		case string, int, float64, uint, bool:
 			row[columnIndex] = fmt.Sprint(value)
@@ -78,7 +93,7 @@ func (dt *DataTable) GetRowString(index int) string {
 			if err != nil {
 				row[columnIndex] = err.Error()
 			} else {
-				row[columnIndex] = fmt.Sprintf("%T(%v)", resolved, resolved)
+				row[columnIndex] = fmt.Sprintf("%v", resolved)
 			}
 		default:
 			log.Fatalln(errors.New("unknown row value type"))
@@ -96,20 +111,19 @@ func (dt *DataTable) ColumnSlices() ([]string, []string, []string) {
 }
 
 func (dt *DataTable) ColumnNames() []string {
-	return SliceTransform(dt.Columns, func(col Column) string {
+	return SliceTransform(dt.columns, func(col Column) string {
 		return col.Name
 	})
 }
 
 func (dt *DataTable) ColumnTypeStrings() []string {
-	return SliceTransform(dt.Columns, func(col Column) string {
+	return SliceTransform(dt.columns, func(col Column) string {
 		return col.ScanType.Kind().String()
-		// return col.ScanType.Name()
 	})
 }
 
 func (dt *DataTable) ColumnDatabaseTypeStrings() []string {
-	return SliceTransform(dt.Columns, func(col Column) string {
+	return SliceTransform(dt.columns, func(col Column) string {
 		return col.DbType
 	})
 }

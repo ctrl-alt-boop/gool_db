@@ -1,4 +1,4 @@
-package terminal
+package tui
 
 import "github.com/jroimartin/gocui"
 
