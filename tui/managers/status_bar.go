@@ -13,11 +13,6 @@ func (tlm *StatusBarManager) Layout(g *gocui.Gui) error {
 		}
 		view.Frame = true
 		view.Editable = false
-
-		// log.SetOutput(view)
-		// for range maxX - 1 {
-		// 	fmt.Fprint(view, SemiBlock)
-		// }
 	}
 	return nil
 }
