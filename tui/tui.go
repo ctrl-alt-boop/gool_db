@@ -107,12 +107,25 @@ func (tui *Tui) onEnterPressed(g *gocui.Gui, v *gocui.View) error {
 	// log.Println(strings.Join(types, ", "))
 	// log.Println(strings.Join(dbTypes, ", "))
 
-	// mainView, err := g.View("main")
-	// if err != nil {
-	// 	return err
-	// }
-	// mainSizeX, mainSizeY := mainView.Size()
-
+	mainView, err := g.View("main")
+	if err != nil {
+		return err
+	}
+	mainSizeX, mainSizeY := mainView.Size()
+	var currentX int
+	for _, col := range table.Columns() {
+		g.SetViewOnBottom(col.Name)
+		colView, err := g.SetView(col.Name, currentX, 0, currentX+mainSizeX/len(table.Columns()), mainSizeY)
+		if err != nil {
+			if err != gocui.ErrUnknownView {
+				return err
+			}
+			colView.Title = col.Name
+			colView.Frame = false
+			colView.Editable = false
+		}
+		currentX += mainSizeX / len(table.Columns())
+	}
 	
 	// tui.Update(func(g *gocui.Gui) error {
 	// 	v, err := g.View("main")

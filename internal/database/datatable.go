@@ -99,6 +99,16 @@ func (dt *DataTable) GetRowString(index int) string {
 	return strings.Join(row, " | ")
 }
 
+func (dt *DataTable) GetColumnRows(columnIndex int) ([]string, int) {
+	rows := make([]string, dt.NumRows())
+	var columnWidth int
+	for rowIndex, row := range dt.rows {
+		rows[rowIndex] = fmt.Sprint(row.Values[columnIndex])
+		columnWidth = max(columnWidth, len(rows[rowIndex]))
+	}
+	return rows, columnWidth
+}
+
 // Names, Types, DbTypes
 func (dt *DataTable) ColumnSlices() ([]string, []string, []string) {
 	return dt.ColumnNames(), dt.ColumnTypeStrings(), dt.ColumnDatabaseTypeStrings()
