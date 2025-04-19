@@ -34,7 +34,7 @@ func Create() *Tui {
 			fmt.Fprint(view, managers.App.GetHelpText())
 		}
 
-		if view, err := g.SetView("table_list", 0, 0, maxX/5, maxY-4); err != nil {
+		if view, err := g.SetView("table_list", 0, 0, maxX/6, maxY-4); err != nil {
 			if err != gocui.ErrUnknownView {
 				return err
 			}
@@ -42,7 +42,7 @@ func Create() *Tui {
 			view.Frame = true
 			view.Editable = false
 		}
-		if view, err := g.SetView("main", maxX/5, 0, maxX-1, maxY-4); err != nil {
+		if view, err := g.SetView("main", maxX/6, 0, maxX-1, maxY-4); err != nil {
 			if err != gocui.ErrUnknownView {
 				return err
 			}
@@ -111,20 +111,23 @@ func (tui *Tui) onEnterPressed(g *gocui.Gui, v *gocui.View) error {
 	if err != nil {
 		return err
 	}
-	mainSizeX, mainSizeY := mainView.Size()
-	var currentX int
-	for _, col := range table.Columns() {
+	maxX, _ := g.Size()
+	_, mainSizeY := mainView.Size()
+	currentX := maxX/6
+	for i, col := range table.Columns() {
 		g.SetViewOnBottom(col.Name)
-		colView, err := g.SetView(col.Name, currentX, 0, currentX+mainSizeX/len(table.Columns()), mainSizeY)
+		data, width := table.GetColumnRows(i)
+		colView, err := g.SetView(col.Name, currentX, 0, currentX+width, mainSizeY)//mainSizeX/len(table.Columns()
 		if err != nil {
 			if err != gocui.ErrUnknownView {
 				return err
 			}
 			colView.Title = col.Name
-			colView.Frame = false
+			colView.Frame = true
 			colView.Editable = false
+			fmt.Fprint(colView, strings.Join(data, "\n"))
 		}
-		currentX += mainSizeX / len(table.Columns())
+		currentX += width
 	}
 	
 	// tui.Update(func(g *gocui.Gui) error {
