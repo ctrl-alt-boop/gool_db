@@ -11,7 +11,7 @@ import (
 var DefaultFetchLimit = 10
 
 func Connect(ip string) (*database.DatabaseContext, error) {
-	connString := fmt.Sprintf("host=%s user=valmatics dbname=test1 password=valmatics sslmode=disable", ip)
+	connString := fmt.Sprintf("host=%s user=suncat dbname=gool_db_dev password=gool_db sslmode=disable", ip)
 	log.Printf("Connecting to %s", ip)
 	return createDatabaseContext(database.DriverPostgreSQL, connString)
 }

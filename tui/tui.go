@@ -23,7 +23,6 @@ func Create() *Tui {
 		panic(err)
 	}
 
-	g.SetManager()
 	g.SetManagerFunc(func(g *gocui.Gui) error {
 		maxX, maxY := g.Size()
 		if view, err := g.SetView("help", 0, maxY-2, maxX-1, maxY); err != nil {
@@ -103,12 +102,31 @@ func (tui *Tui) onEnterPressed(g *gocui.Gui, v *gocui.View) error {
 
 	table := tui.DatabaseContext.FetchTable(selection)
 
-	names, types, dbTypes := table.ColumnSlices()
+	names := table.ColumnNames()
 	log.Println(strings.Join(names, ", "))
-	log.Println(strings.Join(types, ", "))
-	log.Println(strings.Join(dbTypes, ", "))
+	// log.Println(strings.Join(types, ", "))
+	// log.Println(strings.Join(dbTypes, ", "))
 
-	log.Println(table.GetRowString(0))
+	// mainView, err := g.View("main")
+	// if err != nil {
+	// 	return err
+	// }
+	// mainSizeX, mainSizeY := mainView.Size()
+
+	
+	// tui.Update(func(g *gocui.Gui) error {
+	// 	v, err := g.View("main")
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	v.Clear()
+	// 	fmt.Fprintln(v, strings.Join(names, " | "))
+	// 	for i := range table.Rows() {
+	// 		fmt.Fprintln(v, table.GetRowString(i))
+	// 	}
+	//
+	// 	return nil
+	// })
 
 	return nil
 }

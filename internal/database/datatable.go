@@ -20,13 +20,9 @@ type Row struct {
 	Values []any
 }
 
-var DefaultColumnMaxWidth int = 12
-
 type DataTable struct {
 	columns []Column
 	rows    []Row
-
-	ColumnMaxWidth int
 }
 
 func (dt *DataTable) NumColumns() int {
@@ -57,7 +53,6 @@ func CreateDataTable(columnTypes []*sql.ColumnType) *DataTable {
 	return &DataTable{
 		columns:        columns,
 		rows:           make([]Row, 0),
-		ColumnMaxWidth: DefaultColumnMaxWidth,
 	}
 }
 
@@ -84,7 +79,7 @@ func (dt *DataTable) GetRowString(index int) string {
 	for columnIndex, column := range dt.columns {
 		rowValue := dt.rows[index].Values[columnIndex]
 		switch value := rowValue.(type) {
-		case string, int, float64, uint, bool:
+		case string, int, int32, int64, float32, float64, uint, bool:
 			row[columnIndex] = fmt.Sprint(value)
 		case time.Time:
 			row[columnIndex] = fmt.Sprint(value.Format("2006-01-02 15:04:05.000000-07"))
@@ -95,11 +90,10 @@ func (dt *DataTable) GetRowString(index int) string {
 			} else {
 				row[columnIndex] = fmt.Sprintf("%v", resolved)
 			}
+		case nil:
+			row[columnIndex] = "null"
 		default:
-			log.Fatalln(errors.New("unknown row value type"))
-		}
-		if len(row[columnIndex]) > dt.ColumnMaxWidth {
-			row[columnIndex] = Abbr(row[columnIndex], dt.ColumnMaxWidth)
+			log.Fatalln(errors.New(fmt.Sprintf("unknown value type %T for %s", value, column.DbType)))
 		}
 	}
 	return strings.Join(row, " | ")
@@ -126,4 +120,9 @@ func (dt *DataTable) ColumnDatabaseTypeStrings() []string {
 	return SliceTransform(dt.columns, func(col Column) string {
 		return col.DbType
 	})
+}
+
+func (dt *DataTable) ClearRows() error {
+	dt.rows = make([]Row, 0)
+	return nil
 }

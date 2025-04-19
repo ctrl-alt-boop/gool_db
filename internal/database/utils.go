@@ -42,11 +42,8 @@ func ResolveDatabaseType(dbType string, value []byte) (any, error) {
 	switch dbType {
 	case "UUID":
 		return uuid.ParseBytes(value)
-	case "JSONB":
-		return string(value), nil
-		// return value.(string), nil
 	default:
-		return value, nil
+		return string(value), nil
 	}
 }
 

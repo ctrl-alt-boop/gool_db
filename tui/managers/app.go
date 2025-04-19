@@ -38,7 +38,7 @@ var App = Application{
 		},
 		TableList: Widget{
 			Name:        "table_list",
-			ManagerType: reflect.TypeFor[TableListManager](),
+			ManagerType: reflect.TypeFor[TableListPanel](),
 		},
 	},
 }

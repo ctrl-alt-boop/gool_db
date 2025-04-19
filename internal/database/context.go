@@ -41,9 +41,10 @@ func (context *DatabaseContext) FetchTable(selectedTable string) *DataTable {
 	table := CreateDataTable(columns)
 	for rows.Next() {
 		table.AddRow(rows.Scan)
+		log.Println("added row")
 	}
 
-	context.FetchLimitOffset += context.FetchLimit
+	// context.FetchLimitOffset += context.FetchLimit
 	return table
 }
 

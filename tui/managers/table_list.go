@@ -2,10 +2,10 @@ package managers
 
 import "github.com/jroimartin/gocui"
 
-type TableListManager struct {
+type TableListPanel struct {
 }
 
-func (tlm *TableListManager) Layout(g *gocui.Gui) error {
+func (tlm *TableListPanel) Layout(g *gocui.Gui) error {
 	maxX, maxY := g.Size()
 	if view, err := g.SetView("table_list", 0, 0, maxX/5, maxY-7); err != nil {
 		if err != gocui.ErrUnknownView {
