@@ -40,6 +40,8 @@ func SliceTransform[T any, U any](slice []T, selector func(T) U) []U {
 func ResolveDatabaseType(dbType string, value []byte) (any, error) {
 	log.Printf("Resolving %s", dbType)
 	switch dbType {
+	case "JSONB":
+		return "{......}", nil
 	case "UUID":
 		return uuid.ParseBytes(value)
 	default:

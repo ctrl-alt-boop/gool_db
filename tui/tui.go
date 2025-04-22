@@ -13,8 +13,9 @@ import (
 type Tui struct {
 	*gocui.Gui
 
-	DatabaseContext *database.DatabaseContext
-	CurrentData     *database.DataTable
+	DatabaseContext    *database.DatabaseContext
+	CurrentData        *database.DataTable
+	CurrentDataColumns []string
 }
 
 func Create() *Tui {
@@ -65,6 +66,7 @@ func Create() *Tui {
 		g,
 		nil,
 		nil,
+		nil,
 	}
 	tui.setKeybinds()
 	return tui
@@ -94,10 +96,14 @@ func (tui *Tui) setKeybinds() {
 	}
 }
 
-func (tui *Tui) onEnterPressed(g *gocui.Gui, v *gocui.View) error {
+func (tui *Tui) onEnterPressed(_ *gocui.Gui, v *gocui.View) error {
 	selection, err := v.Word(v.Cursor())
 	if err != nil {
 		return err
+	}
+
+	for _, dataColumn := range tui.CurrentDataColumns {
+		tui.DeleteView(dataColumn)
 	}
 
 	table := tui.DatabaseContext.FetchTable(selection)
@@ -106,32 +112,36 @@ func (tui *Tui) onEnterPressed(g *gocui.Gui, v *gocui.View) error {
 	log.Println(strings.Join(names, ", "))
 	// log.Println(strings.Join(types, ", "))
 	// log.Println(strings.Join(dbTypes, ", "))
-	tui.Update(func(g *gocui.Gui) error {
-		mainView, err := g.View("main")
-		if err != nil {
-			return err
-		}
-		maxX, _ := g.Size()
-		_, mainSizeY := mainView.Size()
-		currentX := maxX / 6
-		for i, col := range table.Columns() {
-			g.SetViewOnBottom(col.Name)
-			data, width := table.GetColumnRows(i)
-			colView, err := g.SetView(col.Name, currentX, 0, currentX+width, mainSizeY) //mainSizeX/len(table.Columns()
-			if err != nil {
-				if err != gocui.ErrUnknownView {
-					return err
-				}
-				colView.Title = col.Name
-				colView.Frame = true
-				colView.Editable = false
-				fmt.Fprint(colView, strings.Join(data, "\n"))
-			}
-			currentX += width
-		}
-		return nil
-	})
 
+	dataColumns := make([]string, 0)
+	columnPadding := 2
+
+	mainView, err := tui.View("main")
+	if err != nil {
+		return err
+	}
+	maxX, _ := tui.Size()
+	_, mainSizeY := mainView.Size()
+	currentX := maxX / 6
+	for i, col := range table.Columns() {
+		data, width := table.GetColumnRows(i)
+		if width <= len(col.Name) {
+			width = columnPadding + len(col.Name) + columnPadding
+		}
+		colView, err := tui.SetView(col.Name, currentX, 0, currentX+width+columnPadding, mainSizeY)
+		if err != nil {
+			if err != gocui.ErrUnknownView {
+				return err
+			}
+			colView.Title = col.Name
+			colView.Frame = true
+			colView.Editable = false
+			fmt.Fprint(colView, strings.Join(data, "\n"))
+		}
+		currentX += width + columnPadding
+		dataColumns = append(dataColumns, col.Name)
+	}
+	tui.CurrentDataColumns = dataColumns
 	return nil
 }
 
@@ -173,8 +183,8 @@ func (tui *Tui) onSetDatabaseContext() {
 
 		view.Title = dbName
 		view.Highlight = true
-		view.SelFgColor = gocui.ColorBlack | gocui.AttrBold
-		view.SelBgColor = gocui.ColorWhite
+		view.SelFgColor = gocui.AttrReverse
+		view.SelBgColor = gocui.AttrReverse
 
 		fmt.Fprint(view, strings.Join(tableNames, "\n"))
 
