@@ -22,6 +22,8 @@ type Row struct {
 type DataTable struct {
 	columns []Column
 	rows    []Row
+
+	Driver GoolDbDriver
 }
 
 func (dt *DataTable) NumColumns() int {
@@ -73,7 +75,7 @@ func (dt *DataTable) AddRow(rowScan func(dest ...any) error) error {
 	return nil
 }
 
-func (dt *DataTable) GetRowColumn(row, column int) string {
+func (dt *DataTable) GetRowColumn(row, column int) string { // Needs a lookielook to see if other drivers are at least similar to this
 	rowColumn := dt.rows[row].Values[column]
 	switch value := rowColumn.(type) {
 	case string, int, int32, int64, float32, float64, uint, bool:
@@ -81,7 +83,7 @@ func (dt *DataTable) GetRowColumn(row, column int) string {
 	case time.Time:
 		return fmt.Sprint(value.Format("2006-01-02 15:04:05.000000-07"))
 	case []byte:
-		resolved, err := ResolveDatabaseType(dt.columns[column].DbType, value)
+		resolved, err := dt.Driver.ResolveDatabaseType(dt.columns[column].DbType, value)
 		if err != nil {
 			return err.Error()
 		} else {

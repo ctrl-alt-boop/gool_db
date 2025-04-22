@@ -1,4 +1,4 @@
-package query
+package drivers
 
 type QueryOptions struct {
 	Limit  int

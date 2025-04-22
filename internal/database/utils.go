@@ -2,20 +2,18 @@ package database
 
 import (
 	"fmt"
-	"log"
 
-	"github.com/ctrl-alt-boop/gooldb/internal/database/query"
-	"github.com/google/uuid"
+	"github.com/ctrl-alt-boop/gooldb/internal/database/drivers"
 )
 
 func NameToDriver(driver DriverName) GoolDbDriver {
 	switch driver {
 	case DriverMySql:
-		return &query.MySql{}
+		return &drivers.MySql{}
 	case DriverPostgreSQL:
-		return &query.Postgres{}
+		return &drivers.Postgres{}
 	case DriverSQLite:
-		return &query.SQLite3{}
+		return &drivers.SQLite3{}
 	default:
 		panic("Driver not implemented")
 	}
@@ -35,18 +33,6 @@ func SliceTransform[T any, U any](slice []T, selector func(T) U) []U {
 		results[i] = selector(value)
 	}
 	return results
-}
-
-func ResolveDatabaseType(dbType string, value []byte) (any, error) {
-	log.Printf("Resolving %s", dbType)
-	switch dbType {
-	case "JSONB":
-		return "{......}", nil
-	case "UUID":
-		return uuid.ParseBytes(value)
-	default:
-		return string(value), nil
-	}
 }
 
 func Abbr(s string, maxWidth int) string {

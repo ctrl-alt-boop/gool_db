@@ -2,6 +2,8 @@ module github.com/ctrl-alt-boop/gooldb
 
 go 1.24.2
 
+// require github.com/awesome-gocui/gocui
+// require github.com/charmbracelet/bubbletea
 require github.com/jroimartin/gocui v0.5.0
 
 require filippo.io/edwards25519 v1.1.0 // indirect

@@ -5,16 +5,10 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/ctrl-alt-boop/gooldb/internal/database/query"
+	"github.com/ctrl-alt-boop/gooldb/internal/database/drivers"
 )
 
-type DriverName = string
-
-const (
-	DriverMySql      DriverName = "mysql"
-	DriverPostgreSQL DriverName = "postgres"
-	DriverSQLite     DriverName = "sqlite3"
-)
+var DefaultFetchLimit = 10
 
 type DatabaseContext struct {
 	Driver           GoolDbDriver
@@ -26,8 +20,31 @@ type DatabaseContext struct {
 	FetchLimitOffset int
 }
 
+func CreateDatabaseContext(driverName DriverName, connectionString string) (*DatabaseContext, error) {
+	db, err := sql.Open(driverName, connectionString)
+	if err != nil {
+		return nil, fmt.Errorf("err when sql.Open(): %w", err)
+	}
+
+	err = db.Ping()
+	if err != nil {
+		return nil, fmt.Errorf("err when db.Ping(): %w", err)
+	}
+
+	context := &DatabaseContext{
+		DriverName:       driverName,
+		DB:               db,
+		Driver:           NameToDriver(driverName),
+		ConnectionString: connectionString,
+
+		FetchLimit:       DefaultFetchLimit,
+		FetchLimitOffset: 0,
+	}
+	return context, nil
+}
+
 func (context *DatabaseContext) FetchTable(selectedTable string) *DataTable {
-	opts := query.QueryOptions{Limit: context.FetchLimit, Offset: context.FetchLimitOffset}
+	opts := drivers.QueryOptions{Limit: context.FetchLimit, Offset: context.FetchLimitOffset}
 	rows, err := context.DB.Query(context.Driver.SelectAllQuery(selectedTable, opts))
 	if err != nil {
 		log.Panicln(err)

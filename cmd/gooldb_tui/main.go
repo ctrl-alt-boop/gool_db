@@ -21,22 +21,10 @@ func main() {
 	defer logFile.Close()
 	log.SetOutput(logFile)
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	gool := gooldb.Create(ip)
 
-	log.Println("Hello")
-	tui := tui.Create()
-	log.Println("Bello")
+	tui := tui.Create(gool)
 
-	go func() {
-		db, err := gooldb.Connect(ip)
-		log.Println("Connect() success")
-		if err != nil {
-			log.Panicln(err)
-		}
-		log.Println("SetDatabaseContext()")
-		tui.SetDatabaseContext(db)
-		log.Println("SetDatabaseContext() done")
-	}()
-	log.Println("Dello")
 	if err := tui.MainLoop(); err != nil && err != gocui.ErrQuit {
 		log.Panicln(err)
 	}
