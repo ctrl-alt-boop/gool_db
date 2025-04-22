@@ -2,7 +2,6 @@ package database
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"log"
 	"reflect"
@@ -51,8 +50,8 @@ func CreateDataTable(columnTypes []*sql.ColumnType) *DataTable {
 	})
 
 	return &DataTable{
-		columns:        columns,
-		rows:           make([]Row, 0),
+		columns: columns,
+		rows:    make([]Row, 0),
 	}
 }
 
@@ -74,36 +73,46 @@ func (dt *DataTable) AddRow(rowScan func(dest ...any) error) error {
 	return nil
 }
 
-func (dt *DataTable) GetRowString(index int) string {
-	row := make([]string, len(dt.columns))
-	for columnIndex, column := range dt.columns {
-		rowValue := dt.rows[index].Values[columnIndex]
-		switch value := rowValue.(type) {
-		case string, int, int32, int64, float32, float64, uint, bool:
-			row[columnIndex] = fmt.Sprint(value)
-		case time.Time:
-			row[columnIndex] = fmt.Sprint(value.Format("2006-01-02 15:04:05.000000-07"))
-		case []byte:
-			resolved, err := ResolveDatabaseType(column.DbType, value)
-			if err != nil {
-				row[columnIndex] = err.Error()
-			} else {
-				row[columnIndex] = fmt.Sprintf("%v", resolved)
-			}
-		case nil:
-			row[columnIndex] = "null"
-		default:
-			log.Fatalln(errors.New(fmt.Sprintf("unknown value type %T for %s", value, column.DbType)))
+func (dt *DataTable) GetRowColumn(row, column int) string {
+	rowColumn := dt.rows[row].Values[column]
+	switch value := rowColumn.(type) {
+	case string, int, int32, int64, float32, float64, uint, bool:
+		return fmt.Sprint(value)
+	case time.Time:
+		return fmt.Sprint(value.Format("2006-01-02 15:04:05.000000-07"))
+	case []byte:
+		resolved, err := ResolveDatabaseType(dt.columns[column].DbType, value)
+		if err != nil {
+			return err.Error()
+		} else {
+			return fmt.Sprintf("%v", resolved)
 		}
+	case nil:
+		return "null"
+	default:
+		log.Fatalf("unknown value type %T for %s\n", value, dt.columns[column].DbType)
+		return ""
 	}
+}
+
+func (dt *DataTable) GetRowStrings(index int) []string {
+	row := make([]string, len(dt.columns))
+	for columnIndex := range dt.columns {
+		row[columnIndex] = dt.GetRowColumn(index, columnIndex)
+	}
+	return row
+}
+
+func (dt *DataTable) GetRowString(index int) string {
+	row := dt.GetRowStrings(index)
 	return strings.Join(row, " | ")
 }
 
 func (dt *DataTable) GetColumnRows(columnIndex int) ([]string, int) {
 	rows := make([]string, dt.NumRows())
 	var columnWidth int
-	for rowIndex, row := range dt.rows {
-		rows[rowIndex] = fmt.Sprint(row.Values[columnIndex])
+	for rowIndex := range dt.rows {
+		rows[rowIndex] = dt.GetRowColumn(rowIndex, columnIndex)
 		columnWidth = max(columnWidth, len(rows[rowIndex]))
 	}
 	return rows, columnWidth

@@ -106,43 +106,31 @@ func (tui *Tui) onEnterPressed(g *gocui.Gui, v *gocui.View) error {
 	log.Println(strings.Join(names, ", "))
 	// log.Println(strings.Join(types, ", "))
 	// log.Println(strings.Join(dbTypes, ", "))
-
-	mainView, err := g.View("main")
-	if err != nil {
-		return err
-	}
-	maxX, _ := g.Size()
-	_, mainSizeY := mainView.Size()
-	currentX := maxX/6
-	for i, col := range table.Columns() {
-		g.SetViewOnBottom(col.Name)
-		data, width := table.GetColumnRows(i)
-		colView, err := g.SetView(col.Name, currentX, 0, currentX+width, mainSizeY)//mainSizeX/len(table.Columns()
+	tui.Update(func(g *gocui.Gui) error {
+		mainView, err := g.View("main")
 		if err != nil {
-			if err != gocui.ErrUnknownView {
-				return err
-			}
-			colView.Title = col.Name
-			colView.Frame = true
-			colView.Editable = false
-			fmt.Fprint(colView, strings.Join(data, "\n"))
+			return err
 		}
-		currentX += width
-	}
-	
-	// tui.Update(func(g *gocui.Gui) error {
-	// 	v, err := g.View("main")
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	v.Clear()
-	// 	fmt.Fprintln(v, strings.Join(names, " | "))
-	// 	for i := range table.Rows() {
-	// 		fmt.Fprintln(v, table.GetRowString(i))
-	// 	}
-	//
-	// 	return nil
-	// })
+		maxX, _ := g.Size()
+		_, mainSizeY := mainView.Size()
+		currentX := maxX / 6
+		for i, col := range table.Columns() {
+			g.SetViewOnBottom(col.Name)
+			data, width := table.GetColumnRows(i)
+			colView, err := g.SetView(col.Name, currentX, 0, currentX+width, mainSizeY) //mainSizeX/len(table.Columns()
+			if err != nil {
+				if err != gocui.ErrUnknownView {
+					return err
+				}
+				colView.Title = col.Name
+				colView.Frame = true
+				colView.Editable = false
+				fmt.Fprint(colView, strings.Join(data, "\n"))
+			}
+			currentX += width
+		}
+		return nil
+	})
 
 	return nil
 }
