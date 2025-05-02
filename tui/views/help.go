@@ -3,25 +3,45 @@ package views
 import (
 	"fmt"
 
-	"github.com/jroimartin/gocui"
+	"github.com/jesseduffield/gocui"
 )
+
+type helpMode int
 
 const HelpFooterName string = "help"
 
-func getHelpText() string {
-	return "\tCtrl-c quit\tF5 Fetch counts\t"
+const (
+	DriversHelp helpMode = iota
+	DatabasesHelp
+	TablesHelp
+)
+
+type HelpFooterView struct {
+	view *gocui.View
+
+	currentMode helpMode
 }
 
-func InitHelpFooter(g *gocui.Gui) error {
+func (h *HelpFooterView) Layout(g *gocui.Gui) error {
 	maxX, maxY := g.Size()
-	if view, err := g.SetView(HelpFooterName, 0, maxY-2, maxX-1, maxY); err != nil {
+	view, err := g.SetView(HelpBar(maxX, maxY))
+	if err != nil {
 		if err != gocui.ErrUnknownView {
-			return err
+			//panic(err)
 		}
 		view.Frame = false
 		view.Editable = false
+		h.view = view
 		fmt.Fprint(view, getHelpText())
 	}
 
 	return nil
+}
+
+func (h *HelpFooterView) SetMode(mode helpMode) {
+	h.currentMode = mode
+}
+
+func getHelpText() string {
+	return "\tCtrl-c quit\tF5 Fetch counts\t"
 }

@@ -1,6 +1,4 @@
 package tui
 
-type State struct {
+type TuiState struct {
 }
-
-var AppState = State{}

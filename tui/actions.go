@@ -2,55 +2,46 @@ package tui
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
-	"github.com/ctrl-alt-boop/gooldb/tui/views"
-	"github.com/jroimartin/gocui"
+	"github.com/jesseduffield/gocui"
 )
 
-func MoveCursorUp(g *gocui.Gui, v *gocui.View) error {
-	if v != nil {
-		v.MoveCursor(0, -1, false)
-	}
-	return nil
-}
-
-func MoveCursorDown(g *gocui.Gui, v *gocui.View) error {
-	if v != nil {
-		v.MoveCursor(0, 1, false)
-	}
-	return nil
-}
-
-func OnEnterPressed(tui *Tui) func(g *gocui.Gui, v *gocui.View) error {
-	return func(_ *gocui.Gui, currentView *gocui.View) error {
-		switch currentView.Name() {
-		case views.SidePanelViewName:
-			word, err := currentView.Word(currentView.Cursor())
-			if err != nil {
-				return err
-			}
-			log.Println("OnEnter:", word)
-			views.SidePanel.OnEnter(tui.GoolDb, word)
-		case views.CommandBarViewName:
-			log.Println("OnEnter:", currentView.Buffer())
-			views.CommandBar.OnEnter(currentView.Buffer())
-		default:
-			if strings.HasPrefix(currentView.Name(), "column_") {
-				_, y := currentView.Cursor()
-				log.Println("OnEnter:", currentView.Name(), "row", y)
-				views.DataTable.OnEnter(strings.TrimPrefix(currentView.Name(), "column_"))
-			}
+func MoveCursorUp() func(*gocui.Gui, *gocui.View) error {
+	return func(g *gocui.Gui, currentView *gocui.View) error {
+		if currentView != nil {
+			MoveCursorWithScrolling(currentView, 0, -1)
 		}
+		return nil
+	}
+}
 
+func MoveCursorDown() func(*gocui.Gui, *gocui.View) error {
+	return func(_ *gocui.Gui, currentView *gocui.View) error {
+		if currentView != nil {
+			MoveCursorWithScrolling(currentView, 0, 1)
+		}
+		return nil
+	}
+}
+
+func MoveCursorLeft() func(*gocui.Gui, *gocui.View) error {
+	return func(_ *gocui.Gui, currentView *gocui.View) error {
+		MoveCursorWithScrolling(currentView, -1, 0)
+		return nil
+	}
+}
+
+func MoveCursorRight() func(*gocui.Gui, *gocui.View) error {
+	return func(_ *gocui.Gui, currentView *gocui.View) error {
+		MoveCursorWithScrolling(currentView, 1, 0)
 		return nil
 	}
 }
 
 func OnF5Pressed(tui *Tui) func(g *gocui.Gui, v *gocui.View) error {
 	return func(_ *gocui.Gui, currentView *gocui.View) error {
-		tablesWithCounts := tui.GoolDb.FetchCounts(currentView.BufferLines())
+		tablesWithCounts := tui.goolDb.FetchCounts(currentView.BufferLines())
 		tui.Update(func(g *gocui.Gui) error {
 			currentView.Clear()
 			fmt.Fprint(currentView, strings.Join(tablesWithCounts, "\n"))
@@ -60,41 +51,46 @@ func OnF5Pressed(tui *Tui) func(g *gocui.Gui, v *gocui.View) error {
 	}
 }
 
-func CycleCurrentView(tui *Tui) func(g *gocui.Gui, v *gocui.View) error {
-	return func(g *gocui.Gui, currentView *gocui.View) error {
-
-		if tui.CurrentDataColumns == nil {
-			return nil
-		}
-
-		switch currentView.Name() {
-		case views.SidePanelViewName:
-			view, err := tui.SetCurrentView(tui.CurrentDataColumns[0])
-			if err != nil {
-				log.Fatal(err)
-			}
-			view.Highlight = true
-			view.SelFgColor = gocui.AttrReverse
-			view.SelBgColor = gocui.AttrReverse
-			if err := view.SetCursor(0, 0); err != nil {
-				return err
-			}
-		default:
-			view, err := tui.SetCurrentView(views.SidePanelViewName)
-			if err != nil {
-				log.Fatal(err)
-			}
-			currentView.Highlight = false
-
-			view.Highlight = true
-			view.SelFgColor = gocui.AttrReverse
-			view.SelBgColor = gocui.AttrReverse
-		}
-
-		return nil
-	}
-}
-
 func Quit(g *gocui.Gui, v *gocui.View) error {
 	return gocui.ErrQuit
+}
+
+func MoveCursorWithScrolling(v *gocui.View, dx, dy int) {
+	cx, cy := v.Cursor()
+	ox, oy := v.Origin()
+	maxX, maxY := v.Size()
+
+	newCx := cx + dx
+	newCy := cy + dy
+
+	newOx := ox
+	newOy := oy
+
+	// Adjust origin for vertical scrolling
+	if newCy < oy {
+		newOy = newCy // Scroll up
+	} else if newCy >= oy+maxY {
+		newOy = newCy - maxY + 1 // Scroll down
+	}
+
+	// Adjust origin for horizontal scrolling
+	if newCx < ox {
+		newOx = newCx // Scroll left
+	} else if newCx >= ox+maxX {
+		newOx = newCx - maxX + 1 // Scroll right
+	}
+
+	// Ensure origin doesn't go below zero
+	if newOx < 0 {
+		newOx = 0
+	}
+	if newOy < 0 {
+		newOy = 0
+	}
+
+	// Apply the new origin if it changed
+	if newOx != ox || newOy != oy {
+		v.SetOrigin(newOx, newOy)
+	}
+	v.SetCursor(newCx, newCy)
 }

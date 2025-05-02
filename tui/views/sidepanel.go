@@ -2,25 +2,26 @@ package views
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/ctrl-alt-boop/gooldb/internal/app/gooldb"
-	"github.com/ctrl-alt-boop/gooldb/internal/database"
-	"github.com/jroimartin/gocui"
+	"github.com/ctrl-alt-boop/gooldb/pkg/logging"
+	"github.com/jesseduffield/gocui"
 )
 
-type SidePanelMode int
+var logger = logging.NewLogger("sidepanel.log")
+
+type sidePanelMode int
 
 const SidePanelViewName string = "side_panel"
 
 const (
-	DriverList SidePanelMode = iota
+	DriverList sidePanelMode = iota
 	DatabaseList
 	TableList
 )
 
-func (m SidePanelMode) Name() string {
+func (m sidePanelMode) Name() string {
 	switch m {
 	case DriverList:
 		return "Drivers"
@@ -29,65 +30,135 @@ func (m SidePanelMode) Name() string {
 	case TableList:
 		return "Tables"
 	default:
-		log.Panic("unknown SidePanelMode")
-		return ""
+		panic("unknown SidePanelMode")
 	}
 }
 
 type SidePanelView struct {
-	*gocui.View
-	CurrentMode SidePanelMode
+	view        *gocui.View
+	gui         *gocui.Gui
+	currentMode sidePanelMode
 }
 
-var SidePanel *SidePanelView
-
-func InitSidePanel(g *gocui.Gui) error {
+func (s *SidePanelView) Layout(g *gocui.Gui) error {
 	maxX, maxY := g.Size()
-	if view, err := g.SetView(SidePanelViewName, 0, 0, maxX/6, maxY-4); err != nil {
+	view, err := g.SetView(SidePanel(maxX, maxY))
+	if err != nil {
 		if err != gocui.ErrUnknownView {
-			return err
-		}
-
-		SidePanel = &SidePanelView{
-			View:        view,
-			CurrentMode: 0,
+			//panic(err)
 		}
 
 		view.Frame = true
 		view.Editable = false
+		view.Highlight = true
+
+		g.SetCurrentView(SidePanelViewName)
+		s.gui = g
+		s.view = view
+		s.SetSidePanelMode(DriverList)
 	}
+
 	return nil
 }
 
-func (s *SidePanelView) OnEnter(gool *gooldb.GoolDb, selection string) error {
-	switch SidePanel.CurrentMode {
-	case DriverList:
-		err := gool.SetDriver(selection)
-		if err != nil {
-			return err
+func (s *SidePanelView) OnEnterPressed(gool *gooldb.GoolDb) func(*gocui.Gui, *gocui.View) error {
+	return func(_ *gocui.Gui, currentView *gocui.View) error {
+		selection, ok := currentView.Word(currentView.Cursor())
+		if !ok {
+			return nil
 		}
-		SetSidePanelMode(DatabaseList)
-	case DatabaseList:
-		err := gool.SetDatabase(selection)
-		if err != nil {
-			return err
+		switch s.currentMode {
+		case DriverList:
+			gool.SetDriver(selection)
+		case DatabaseList:
+			gool.SetDatabase(selection)
+		case TableList:
+			gool.SetTable(selection)
 		}
-		SetSidePanelMode(TableList)
-	case TableList:
-
+		return nil
 	}
-	return nil
 }
 
-func SetSidePanelMode(mode SidePanelMode) error {
-	SidePanel.CurrentMode = mode
-	SidePanel.Title = mode.Name()
-	SidePanel.Highlight = true
-	SidePanel.SelFgColor = gocui.AttrReverse
-	SidePanel.SelBgColor = gocui.AttrReverse
-
-	SidePanel.Clear()
-	fmt.Fprint(SidePanel.View, strings.Join(database.SupportedDrivers, "\n"))
-
-	return nil
+// selected string, databases []string
+func (s *SidePanelView) OnDriverSet(eventArgs any, err error) {
+	logger.Info("OnDriverSet: ", eventArgs, err)
+	args, ok := eventArgs.(gooldb.DriverSetEvent)
+	if !ok {
+		logger.Warn(eventArgs, args, ok)
+		return
+	}
+	logger.Info("OnDriverSet: ")
+	if err != nil {
+		logger.Warn(err)
+		return
+	}
+	logger.Info("OnDriverSet: ")
+	s.gui.Update(func(g *gocui.Gui) error {
+		logger.Info("OnDriverSet: ", "SetSidePanelMode(DatabaseList)")
+		s.SetSidePanelMode(DatabaseList)
+		s.view.Title = args.Selected
+		fmt.Fprint(s.view, strings.Join(args.Databases, "\n"))
+		return nil
+	})
 }
+
+// selected string, tables []string
+func (s *SidePanelView) OnDatabaseSet(eventArgs any, err error) {
+	logger.Info("OnDatabaseSet: ", eventArgs, err)
+	args, ok := eventArgs.(gooldb.DatabaseSetEvent)
+	if !ok {
+		logger.Warn(err)
+		return
+	}
+	if err != nil {
+		logger.Warn(err)
+		return
+	}
+	s.gui.Update(func(g *gocui.Gui) error {
+		s.SetSidePanelMode(TableList)
+		s.view.Title = args.Selected
+		fmt.Fprint(s.view, strings.Join(args.Tables, "\n"))
+		return nil
+	})
+}
+
+func (s *SidePanelView) SetSidePanelMode(mode sidePanelMode) {
+	s.currentMode = mode
+	s.view.Title = mode.Name()
+	s.view.Highlight = true
+	s.view.SelFgColor = gocui.AttrReverse
+	s.view.SelBgColor = gocui.AttrReverse
+	s.view.SetCursor(0, 0)
+
+	s.view.Clear()
+
+	if mode == DriverList {
+		fmt.Fprint(s.view, strings.Join(gooldb.SupportedDrivers, "\n"))
+	}
+}
+
+// maxX, _ := s.gui.Size()
+// _, tableSizeY := dataView.Size()
+// currentX := maxX / 6
+// s.gui.Update(func(g *gocui.Gui) error {
+// 	for i, col := range table.Columns() {
+// 		data, width := table.GetColumnRows(i)
+// 		if width <= len(col.Name) {
+// 			width = columnPadding + len(col.Name) + columnPadding
+// 		}
+// 		colView, err := s.gui.SetView(DataColumnViewPrefix+col.Name, currentX, 0, currentX+width+columnPadding, tableSizeY+1)
+// 		if err != nil {
+// 			if err != gocui.ErrUnknownView {
+// 				s.OnError(err)
+// 				return err
+// 			}
+// 			colView.Title = col.Name
+// 			colView.Frame = true
+// 			colView.Editable = false
+// 			fmt.Fprint(colView, strings.Join(data, "\n"))
+// 		}
+// 		currentX += width + columnPadding
+// 		AddCurrentDataColumns(colView)
+// 	}
+// 	return nil
+// })

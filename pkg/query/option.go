@@ -1,6 +1,6 @@
-package drivers
+package query
 
-type QueryOptions struct {
+type Option struct {
 	Limit  int
 	Offset int
 	Where  []struct {

@@ -1,14 +1,15 @@
-package drivers
+package sql
 
 import (
-	"github.com/ctrl-alt-boop/gooldb/internal/database/connection"
+	"github.com/ctrl-alt-boop/gooldb/internal/app/internal/database/connection"
+	"github.com/ctrl-alt-boop/gooldb/pkg/query"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 type SQLite3 struct{}
 
 // ConnectionString implements database.GoolDbDriver.
-func (d *SQLite3) ConnectionString(settings connection.Settings) string {
+func (d *SQLite3) ConnectionString(settings *connection.Settings) string {
 	panic("unimplemented")
 }
 
@@ -40,6 +41,6 @@ func (d *SQLite3) CountQuery(table string) string {
 }
 
 // SelectAllQuery implements database.GoolDbDriver.
-func (d *SQLite3) SelectAllQuery(table string, opts QueryOptions) string {
+func (d *SQLite3) SelectAllQuery(table string, opts query.Option) string {
 	panic("unimplemented")
 }

@@ -1,6 +1,8 @@
 package connection
 
-import "log"
+import (
+	"errors"
+)
 
 type Settings struct {
 	DriverName string
@@ -13,8 +15,8 @@ type Settings struct {
 	SslMode    string
 }
 
-func NewSettings(options ...Option) Settings {
-	settings := Settings{
+func NewSettings(options ...Option) (*Settings, error) {
+	settings := &Settings{
 		DriverName: "",
 		Ip:         "localhost",
 		Port:       0,
@@ -26,14 +28,14 @@ func NewSettings(options ...Option) Settings {
 	}
 
 	for _, option := range options {
-		option(&settings)
+		option(settings)
 	}
 
 	if settings.DriverName == "" {
-		log.Panic("driver not set")
+		return nil, errors.New("driver name cannot be empty")
 	}
 
-	return settings
+	return settings, nil
 }
 
 type Option func(*Settings)
