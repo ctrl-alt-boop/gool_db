@@ -68,8 +68,6 @@ func (d *Postgres) SelectAllQuery(table string, opts query.Option) string {
 
 func (d *Postgres) ResolveDatabaseType(dbType string, value []byte) (any, error) {
 	switch dbType {
-	// case "JSONB":
-	// 	return "{......}", nil
 	case "UUID":
 		return uuid.ParseBytes(value)
 	default:

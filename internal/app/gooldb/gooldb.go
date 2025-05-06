@@ -44,7 +44,7 @@ func (gool *GoolDb) RegisterEventHandler(eventType EventType, handler EventHandl
 	gool.eventHandlers[eventType] = handler
 }
 
-func (gool *GoolDb) SetDriver(name database.DriverName) {
+func (gool *GoolDb) SelectDriver(name database.DriverName) {
 	handler, exists := gool.eventHandlers[DriverSet]
 	if !exists {
 		logger.Panic("no handler registered for DriverSet event")
@@ -89,7 +89,7 @@ func (gool *GoolDb) SetDriver(name database.DriverName) {
 	}()
 }
 
-func (gool *GoolDb) SetDatabase(name string) {
+func (gool *GoolDb) SelectDatabase(name string) {
 	handler, exists := gool.eventHandlers[DatabaseSet]
 	if !exists {
 		logger.Panic("no handler registered for DatabaseSet event")
@@ -115,7 +115,7 @@ func (gool *GoolDb) SetDatabase(name string) {
 	}()
 }
 
-func (gool *GoolDb) SetTable(name string) {
+func (gool *GoolDb) SelectTable(name string) {
 	handler, exists := gool.eventHandlers[TableSet]
 	if !exists {
 		logger.Panic("no handler registered for TableSet event")

@@ -23,25 +23,24 @@ func (c *CommandBarView) Layout(g *gocui.Gui) error {
 	maxX, maxY := g.Size()
 	view, err := g.SetView(CommandBar(maxX, maxY))
 	if err != nil {
-		if err != gocui.ErrUnknownView {
-			//panic(err)
+		if !gocui.IsUnknownView(err) {
+			logger.Panic(err)
 		}
 
 		view.Frame = true
-		view.Editable = false
+		view.Editable = true
+		view.IgnoreCarriageReturns = true
+
 		c.view = view
-		fmt.Fprint(view, "...")
+		fmt.Fprint(view, ">")
 	}
 	return nil
 }
 
 func (c *CommandBarView) OnEnterPressed(gool *gooldb.GoolDb) func(*gocui.Gui, *gocui.View) error {
 	return func(_ *gocui.Gui, currentView *gocui.View) error {
-		c.OnEnter(currentView.Buffer())
+		command := currentView.Buffer()
+		logger.Info(command)
 		return nil
 	}
-}
-
-func (c *CommandBarView) OnEnter(text string) error {
-	return nil
 }

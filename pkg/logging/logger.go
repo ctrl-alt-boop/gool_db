@@ -72,7 +72,7 @@ func (l *Logger) formatMessageWithCallStack(skipFrames, numFrames int, args ...a
 	}
 
 	messageContent := fmt.Sprint(args...)
-	return stackInfo.String() + messageContent
+	return stackInfo.String() + "\n\t" + messageContent
 }
 
 func (l *Logger) Info(args ...any) {
@@ -91,8 +91,15 @@ func (l *Logger) Warn(args ...any) {
 
 func (l *Logger) Panic(args ...any) {
 	l.logger.SetPrefix("[PANIC]: ")
-	message := l.formatMessageWithCallStack(3, 3, args...)
-	l.logger.Println(message)
+	message := l.formatMessageWithCallStack(3, 5, args...)
+	formatted := make([]string, 0)
+	lines := strings.SplitSeq(message, "\n")
+	for line := range lines {
+		trimmed := strings.TrimSpace(line)
+		formatted = append(formatted, trimmed)
+	}
+
+	l.logger.Panic(strings.Join(formatted, "\n"))
 	l.logger.SetPrefix("")
 }
 

@@ -28,3 +28,8 @@ type TableSetEvent struct {
 	Selected string
 	Table    *DataTable
 }
+
+type CellSelectedEvent struct {
+	Selected string
+	Value    string
+}

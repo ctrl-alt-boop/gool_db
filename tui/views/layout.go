@@ -1,6 +1,10 @@
 package views
 
-import "github.com/jesseduffield/gocui"
+import (
+	"encoding/json"
+
+	"github.com/jesseduffield/gocui"
+)
 
 const (
 	edgeOffset          int = 1
@@ -28,7 +32,7 @@ func DataView(termSizeX, termSizeY int) (string, int, int, int, int, byte) {
 	termSizeX -= edgeOffset
 	termSizeY -= commandBarHeight + helpBarHeight
 	x0, x1 := termSizeX/sidePanelWidthRatio, termSizeX
-	y0, y1 := 0, termSizeY
+	y0, y1 := -1, termSizeY
 	return DataTableViewName, x0, y0, x1, y1, 0
 }
 
@@ -59,4 +63,16 @@ func SetSidePanelColors(view *gocui.View) {
 	view.BgColor = DefaultBackgroundColor
 	view.SelFgColor = gocui.AttrReverse
 	view.SelBgColor = gocui.AttrReverse
+}
+
+func PrettifyJson(jsonString string) string {
+	var tmp any
+	if err := json.Unmarshal([]byte(jsonString), &tmp); err != nil {
+		return jsonString
+	}
+	prettyJson, err := json.MarshalIndent(tmp, "", "  ")
+	if err != nil {
+		return jsonString
+	}
+	return string(prettyJson)
 }

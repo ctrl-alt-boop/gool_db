@@ -44,8 +44,8 @@ func (s *SidePanelView) Layout(g *gocui.Gui) error {
 	maxX, maxY := g.Size()
 	view, err := g.SetView(SidePanel(maxX, maxY))
 	if err != nil {
-		if err != gocui.ErrUnknownView {
-			//panic(err)
+		if !gocui.IsUnknownView(err) {
+			logger.Panic(err)
 		}
 
 		view.Frame = true
@@ -69,11 +69,11 @@ func (s *SidePanelView) OnEnterPressed(gool *gooldb.GoolDb) func(*gocui.Gui, *go
 		}
 		switch s.currentMode {
 		case DriverList:
-			gool.SetDriver(selection)
+			gool.SelectDriver(selection)
 		case DatabaseList:
-			gool.SetDatabase(selection)
+			gool.SelectDatabase(selection)
 		case TableList:
-			gool.SetTable(selection)
+			gool.SelectTable(selection)
 		}
 		return nil
 	}
@@ -134,6 +134,33 @@ func (s *SidePanelView) SetSidePanelMode(mode sidePanelMode) {
 
 	if mode == DriverList {
 		fmt.Fprint(s.view, strings.Join(gooldb.SupportedDrivers, "\n"))
+	}
+}
+
+func (s *SidePanelView) MoveCursorUp() func(*gocui.Gui, *gocui.View) error {
+	return func(g *gocui.Gui, sidePanelView *gocui.View) error {
+		if sidePanelView != nil {
+			curY := sidePanelView.CursorY()
+			if curY == 0 {
+				return nil
+			}
+			sidePanelView.SetCursor(0, curY-1)
+		}
+		return nil
+	}
+}
+
+func (s *SidePanelView) MoveCursorDown() func(*gocui.Gui, *gocui.View) error {
+	return func(_ *gocui.Gui, sidePanelView *gocui.View) error {
+		if sidePanelView != nil {
+			curY := sidePanelView.CursorY()
+			numLines := len(sidePanelView.BufferLines())
+			if curY >= numLines-1 {
+				return nil
+			}
+			sidePanelView.SetCursor(0, curY+1)
+		}
+		return nil
 	}
 }
 

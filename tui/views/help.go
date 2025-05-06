@@ -14,6 +14,9 @@ const (
 	DriversHelp helpMode = iota
 	DatabasesHelp
 	TablesHelp
+
+	DataTableHelp
+	TableCellHelp
 )
 
 type HelpFooterView struct {
@@ -26,8 +29,8 @@ func (h *HelpFooterView) Layout(g *gocui.Gui) error {
 	maxX, maxY := g.Size()
 	view, err := g.SetView(HelpBar(maxX, maxY))
 	if err != nil {
-		if err != gocui.ErrUnknownView {
-			//panic(err)
+		if !gocui.IsUnknownView(err) {
+			logger.Panic(err)
 		}
 		view.Frame = false
 		view.Editable = false

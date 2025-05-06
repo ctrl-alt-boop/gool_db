@@ -9,8 +9,6 @@ import (
 	shared "github.com/ctrl-alt-boop/gooldb/pkg"
 )
 
-const maxCellWidth = 36 // Guid length, including the '-'s
-
 type DataTable struct {
 	columns []database.Column
 	rows    []database.Row
@@ -126,59 +124,4 @@ func (dt *DataTable) ColumnDatabaseTypeStrings() []string {
 func (dt *DataTable) ClearRows() error {
 	dt.rows = make([]database.Row, 0)
 	return nil
-}
-
-func (dt *DataTable) GetFormatedRows() ([]string, []int) {
-	columnWidths := make([]int, dt.NumColumns())
-	if dt.NumRows() == 0 {
-		return []string{}, columnWidths
-	}
-	for i := range dt.rows {
-		row := dt.GetRowStrings(i)
-		for columnIndex, value := range row {
-			if len(value) >= maxCellWidth {
-				columnWidths[columnIndex] = maxCellWidth
-			}
-			if len(value) > columnWidths[columnIndex] && len(value) <= maxCellWidth {
-				columnWidths[columnIndex] = len(value)
-			}
-		}
-	}
-	formatedRows := make([]string, dt.NumRows())
-	for i := range dt.rows {
-		row := dt.GetRowStrings(i)
-		for columnIndex, value := range row {
-			cell := ""
-			if len(value) > columnWidths[columnIndex] {
-				cell = value[:columnWidths[columnIndex]-3] + "..."
-				logger.Info(cell)
-			} else {
-				cell = value
-			}
-			formatedRows[i] += " " + cell
-			formatedRows[i] += strings.Repeat(" ", columnWidths[columnIndex]-len(cell)+1)
-			formatedRows[i] += "\u2502"
-		}
-	}
-	logger.Info("len(formatedRows) = ", len(formatedRows))
-	logger.Info("maxWidths = ", columnWidths)
-	logger.Info(formatedRows)
-	return formatedRows, columnWidths
-}
-
-func (dt *DataTable) GetFormatedTitle(columnWidths []int) string {
-	formatedHeader := ""
-	for columnIndex, name := range dt.ColumnNames() {
-		if columnIndex > 0 {
-			formatedHeader += "\u2500"
-		}
-		formatedHeader += name
-		if columnWidths[columnIndex] == 0 {
-			columnWidths[columnIndex] = len(name) + 2
-		}
-		logger.Info("column = ", name, ", width = ", columnWidths[columnIndex]-len(name))
-		formatedHeader += strings.Repeat("\u2500", columnWidths[columnIndex]-len(name)+1)
-		formatedHeader += "\u252c"
-	}
-	return formatedHeader
 }

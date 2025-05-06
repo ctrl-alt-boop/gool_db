@@ -52,6 +52,7 @@ func OnF5Pressed(tui *Tui) func(g *gocui.Gui, v *gocui.View) error {
 }
 
 func Quit(g *gocui.Gui, v *gocui.View) error {
+	// g.Close()
 	return gocui.ErrQuit
 }
 
@@ -88,9 +89,9 @@ func MoveCursorWithScrolling(v *gocui.View, dx, dy int) {
 		newOy = 0
 	}
 
+	v.SetCursor(newCx, newCy)
 	// Apply the new origin if it changed
 	if newOx != ox || newOy != oy {
 		v.SetOrigin(newOx, newOy)
 	}
-	v.SetCursor(newCx, newCy)
 }

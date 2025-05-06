@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/ctrl-alt-boop/gooldb/internal/app/gooldb"
@@ -25,9 +26,28 @@ func main() {
 
 	logger.Info("Tui Create")
 	tui := tui.Create(notifier, gool)
+	defer tui.Gui.Close()
 
 	logger.Info("Tui Run")
-	if err := tui.MainLoop(); err != nil && err != gocui.ErrQuit {
+	err := panicRecovery(func() error {
+		return tui.MainLoop()
+	}, logger)
+
+	if err != nil && err != gocui.ErrQuit {
 		logger.Panic(err)
 	}
+}
+
+func panicRecovery(fn func() error, logger *logging.Logger) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(error); ok {
+				err = fmt.Errorf("panicRecovery: %w", e)
+			} else {
+				err = fmt.Errorf("panicRecovery: %v", r)
+			}
+			logger.Panic(err)
+		}
+	}()
+	return fn()
 }
