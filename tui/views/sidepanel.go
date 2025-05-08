@@ -56,6 +56,7 @@ func (s *SidePanelView) Layout(g *gocui.Gui) error {
 		s.gui = g
 		s.view = view
 		s.SetSidePanelMode(DriverList)
+		fmt.Fprint(view, strings.Join(gooldb.SupportedDrivers, "\n"))
 	}
 
 	return nil
@@ -87,14 +88,11 @@ func (s *SidePanelView) OnDriverSet(eventArgs any, err error) {
 		logger.Warn(eventArgs, args, ok)
 		return
 	}
-	logger.Info("OnDriverSet: ")
 	if err != nil {
 		logger.Warn(err)
 		return
 	}
-	logger.Info("OnDriverSet: ")
 	s.gui.Update(func(g *gocui.Gui) error {
-		logger.Info("OnDriverSet: ", "SetSidePanelMode(DatabaseList)")
 		s.SetSidePanelMode(DatabaseList)
 		s.view.Title = args.Selected
 		fmt.Fprint(s.view, strings.Join(args.Databases, "\n"))
@@ -131,10 +129,6 @@ func (s *SidePanelView) SetSidePanelMode(mode sidePanelMode) {
 	s.view.SetCursor(0, 0)
 
 	s.view.Clear()
-
-	if mode == DriverList {
-		fmt.Fprint(s.view, strings.Join(gooldb.SupportedDrivers, "\n"))
-	}
 }
 
 func (s *SidePanelView) MoveCursorUp() func(*gocui.Gui, *gocui.View) error {
@@ -162,6 +156,32 @@ func (s *SidePanelView) MoveCursorDown() func(*gocui.Gui, *gocui.View) error {
 		}
 		return nil
 	}
+}
+
+func (s *SidePanelView) SetInactiveColors() {
+	s.gui.Update(func(g *gocui.Gui) error {
+		s.view.TitleColor = DefaultForegroundColor | gocui.AttrDim
+		s.view.FrameColor = DefaultForegroundColor | gocui.AttrDim
+
+		s.view.FgColor = DefaultForegroundColor | gocui.AttrDim
+		s.view.BgColor = DefaultBackgroundColor | gocui.AttrDim
+		s.view.SelFgColor = DefaultForegroundColor | gocui.AttrBold
+		s.view.SelBgColor = DefaultBackgroundColor | gocui.AttrBold
+		return nil
+	})
+}
+
+func (s *SidePanelView) SetActiveColors() {
+	s.gui.Update(func(g *gocui.Gui) error {
+		s.view.TitleColor = DefaultForegroundColor
+		s.view.FrameColor = DefaultForegroundColor
+
+		s.view.FgColor = DefaultForegroundColor
+		s.view.BgColor = DefaultBackgroundColor
+		s.view.SelFgColor = InvForegroundColor
+		s.view.SelBgColor = InvBackgroundColor
+		return nil
+	})
 }
 
 // maxX, _ := s.gui.Size()

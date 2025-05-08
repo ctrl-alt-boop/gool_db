@@ -82,9 +82,8 @@ func (dt *DataTable) GetRowString(index int) string {
 	return strings.Join(row, " | ")
 }
 
-func (dt *DataTable) GetColumnRows(columnIndex int) ([]string, int) {
-	rows := make([]string, dt.NumRows())
-	var columnWidth int
+func (dt *DataTable) GetColumnRows(columnIndex int) (rows []string, columnWidth int) {
+	rows = make([]string, dt.NumRows())
 	for rowIndex := range dt.rows {
 		value, err := dt.GetRowColumn(rowIndex, columnIndex)
 		if err != nil {
@@ -95,12 +94,14 @@ func (dt *DataTable) GetColumnRows(columnIndex int) ([]string, int) {
 
 		columnWidth = max(columnWidth, len(rows[rowIndex]))
 	}
-	return rows, columnWidth
+	return
 }
 
-// Names, Types, DbTypes
-func (dt *DataTable) ColumnSlices() ([]string, []string, []string) {
-	return dt.ColumnNames(), dt.ColumnTypeStrings(), dt.ColumnDatabaseTypeStrings()
+func (dt *DataTable) ColumnSlices() (names []string, types []string, dbTypes []string) {
+	names = dt.ColumnNames()
+	types = dt.ColumnTypeStrings()
+	dbTypes = dt.ColumnDatabaseTypeStrings()
+	return
 }
 
 func (dt *DataTable) ColumnNames() []string {

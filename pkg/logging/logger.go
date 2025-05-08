@@ -89,9 +89,51 @@ func (l *Logger) Warn(args ...any) {
 	l.logger.SetPrefix("")
 }
 
+func (l *Logger) Error(args ...any) {
+	l.logger.SetPrefix("[Error]: ")
+	message := l.formatMessage(args...)
+	l.logger.Fatal(message)
+	l.logger.SetPrefix("")
+}
+
 func (l *Logger) Panic(args ...any) {
 	l.logger.SetPrefix("[PANIC]: ")
 	message := l.formatMessageWithCallStack(3, 5, args...)
+	formatted := make([]string, 0)
+	lines := strings.SplitSeq(message, "\n")
+	for line := range lines {
+		trimmed := strings.TrimSpace(line)
+		formatted = append(formatted, trimmed)
+	}
+
+	l.logger.Panic(strings.Join(formatted, "\n"))
+	l.logger.SetPrefix("")
+}
+
+func (l *Logger) Infof(format string, args ...any) {
+	l.logger.SetPrefix("[INFO]: ")
+	message := l.formatMessage(fmt.Sprintf(format, args...))
+	l.logger.Println(message)
+	l.logger.SetPrefix("")
+}
+
+func (l *Logger) Warnf(format string, args ...any) {
+	l.logger.SetPrefix("[WARN]: ")
+	message := l.formatMessage(fmt.Sprintf(format, args...))
+	l.logger.Println(message)
+	l.logger.SetPrefix("")
+}
+
+func (l *Logger) Errorf(format string, args ...any) {
+	l.logger.SetPrefix("[Error]: ")
+	message := l.formatMessage(fmt.Sprintf(format, args...))
+	l.logger.Fatal(message)
+	l.logger.SetPrefix("")
+}
+
+func (l *Logger) Panicf(format string, args ...any) {
+	l.logger.SetPrefix("[PANIC]: ")
+	message := l.formatMessageWithCallStack(3, 5, fmt.Sprintf(format, args...))
 	formatted := make([]string, 0)
 	lines := strings.SplitSeq(message, "\n")
 	for line := range lines {

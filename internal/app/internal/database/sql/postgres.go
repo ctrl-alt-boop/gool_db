@@ -61,7 +61,7 @@ func (d *Postgres) CountQuery(table string) string {
 	return fmt.Sprintf("SELECT COUNT(*) FROM %s", table)
 }
 
-func (d *Postgres) SelectAllQuery(table string, opts query.Option) string {
+func (d *Postgres) SelectAllQuery(table string, opts query.Statement) string {
 	queryOptsString := buildQueryOptions(opts)
 	return fmt.Sprintf("SELECT * FROM %s%s", table, queryOptsString)
 }
@@ -75,7 +75,7 @@ func (d *Postgres) ResolveDatabaseType(dbType string, value []byte) (any, error)
 	}
 }
 
-func buildQueryOptions(opts query.Option) string {
+func buildQueryOptions(opts query.Statement) string {
 	sb := strings.Builder{}
 
 	// TODO: ADD WHERE THING HERE

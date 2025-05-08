@@ -41,6 +41,6 @@ func (d *SQLite3) CountQuery(table string) string {
 }
 
 // SelectAllQuery implements database.GoolDbDriver.
-func (d *SQLite3) SelectAllQuery(table string, opts query.Option) string {
+func (d *SQLite3) SelectAllQuery(table string, opts query.Statement) string {
 	panic("unimplemented")
 }

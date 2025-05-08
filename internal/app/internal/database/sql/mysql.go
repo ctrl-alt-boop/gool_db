@@ -37,6 +37,6 @@ func (d *MySql) CountQuery(table string) string {
 }
 
 // SelectAllQuery implements database.GoolDbDriver.
-func (d *MySql) SelectAllQuery(table string, opts query.Option) string {
+func (d *MySql) SelectAllQuery(table string, opts query.Statement) string {
 	panic("unimplemented")
 }

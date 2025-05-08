@@ -21,6 +21,7 @@ type dataViewState struct {
 	columnWidths       []int
 	table              *gooldb.DataTable
 	contentWidth       int
+	maxRows            int
 }
 
 type DataTableView struct {
@@ -28,6 +29,10 @@ type DataTableView struct {
 	gui  *gocui.Gui
 	// gool  *gooldb.GoolDb
 	state dataViewState
+}
+
+func (d *DataTableView) IsTableSet() bool {
+	return d.state.table != nil
 }
 
 func (d *DataTableView) Layout(g *gocui.Gui) error {
@@ -43,7 +48,7 @@ func (d *DataTableView) Layout(g *gocui.Gui) error {
 		d.gui = g
 		d.state = dataViewState{}
 	}
-
+	d.state.maxRows = view.InnerHeight() - firstRow
 	return nil
 }
 
@@ -54,26 +59,22 @@ func (d *DataTableView) OnEnterPressed(gool *gooldb.GoolDb) func(*gocui.Gui, *go
 	}
 }
 
-// selected string, table *gooldb.DataTable
 func (d *DataTableView) OnTableSet(eventArgs any, err error) {
 	logger.Info("OnTableSet: ", eventArgs, err)
+	if err != nil {
+		return
+	}
 	args, ok := eventArgs.(gooldb.TableSetEvent)
 	if !ok {
 		return
 	}
-	table := args.Table
-	if err != nil {
-		return
-	}
-
-	d.state.table = table
-	dataView := d.view
+	d.state.table = args.Table
 	d.gui.Update(func(g *gocui.Gui) error {
-		dataView.Clear()
+		d.view.Clear()
 		formatedRows := d.getFormatedRows()
 		formatedHeader := d.getFormatedTitle()
-		// dataView.Title = formatedHeader
-		fmt.Fprint(dataView, formatedHeader)
+		// d.view.Title = formatedHeader
+		fmt.Fprint(d.view, formatedHeader)
 
 		d.state.currentColumnIndex = 0
 		d.state.currentRowIndex = firstRow
@@ -81,8 +82,8 @@ func (d *DataTableView) OnTableSet(eventArgs any, err error) {
 		logger.Info("header: ", formatedHeader)
 		logger.Info("rows: ", strings.Join(formatedRows, "\n"))
 
-		// fmt.Fprint(dataView, formatedHeader)
-		fmt.Fprint(dataView, strings.Join(formatedRows, "\n"))
+		// fmt.Fprint(d.view, formatedHeader)
+		fmt.Fprint(d.view, strings.Join(formatedRows, "\n"))
 		return nil
 	})
 }
@@ -94,7 +95,6 @@ const (
 )
 
 func (d *DataTableView) HighlightSelectedCell() {
-
 	buf := d.view.Buffer()
 	buf = strings.ReplaceAll(buf, hiStart, "")
 	buf = strings.ReplaceAll(buf, hiEnd, "")
@@ -110,6 +110,17 @@ func (d *DataTableView) HighlightSelectedCell() {
 	d.gui.Update(func(g *gocui.Gui) error {
 		d.view.Clear()
 		fmt.Fprint(d.view, strings.Join(data, "\n"))
+		return nil
+	})
+}
+
+func (d *DataTableView) ClearHighlight() {
+	buf := d.view.Buffer()
+	buf = strings.ReplaceAll(buf, hiStart, "")
+	buf = strings.ReplaceAll(buf, hiEnd, "")
+	d.gui.Update(func(g *gocui.Gui) error {
+		d.view.Clear()
+		fmt.Fprint(d.view, buf)
 		return nil
 	})
 }

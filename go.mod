@@ -26,4 +26,5 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/mattn/go-runewidth v0.0.16
 	github.com/mattn/go-sqlite3 v1.14.28
+	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
 )

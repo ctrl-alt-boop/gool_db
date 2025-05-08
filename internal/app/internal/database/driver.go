@@ -20,6 +20,6 @@ type DbDriver interface {
 	DatabaseNameQuery() string
 	TableNamesQuery() string
 	CountQuery(table string) string
-	SelectAllQuery(table string, opts query.Option) string
+	SelectAllQuery(table string, opts query.Statement) string
 	ResolveDatabaseType(dbType string, value []byte) (any, error)
 }

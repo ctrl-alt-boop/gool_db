@@ -39,7 +39,7 @@ func MoveCursorRight() func(*gocui.Gui, *gocui.View) error {
 	}
 }
 
-func OnF5Pressed(tui *Tui) func(g *gocui.Gui, v *gocui.View) error {
+func (tui *Tui) OnF5Pressed() func(g *gocui.Gui, v *gocui.View) error {
 	return func(_ *gocui.Gui, currentView *gocui.View) error {
 		tablesWithCounts := tui.goolDb.FetchCounts(currentView.BufferLines())
 		tui.Update(func(g *gocui.Gui) error {
@@ -49,11 +49,6 @@ func OnF5Pressed(tui *Tui) func(g *gocui.Gui, v *gocui.View) error {
 		})
 		return nil
 	}
-}
-
-func Quit(g *gocui.Gui, v *gocui.View) error {
-	// g.Close()
-	return gocui.ErrQuit
 }
 
 func MoveCursorWithScrolling(v *gocui.View, dx, dy int) {

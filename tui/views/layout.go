@@ -14,9 +14,9 @@ const (
 	columnPadding       int = 2
 )
 
-var DefaultTextColor = gocui.ColorDefault
+var DefaultForegroundColor = gocui.ColorDefault
 var DefaultBackgroundColor = gocui.ColorDefault
-var InvTextColor = gocui.ColorDefault | gocui.AttrReverse
+var InvForegroundColor = gocui.ColorDefault | gocui.AttrReverse
 var InvBackgroundColor = gocui.ColorDefault | gocui.AttrReverse
 
 func SidePanel(termSizeX, termSizeY int) (string, int, int, int, int, byte) {
@@ -25,7 +25,7 @@ func SidePanel(termSizeX, termSizeY int) (string, int, int, int, int, byte) {
 	termSizeY -= commandBarHeight + helpBarHeight
 	x0, x1 := 0, termSizeX
 	y0, y1 := 0, termSizeY
-	return SidePanelViewName, x0, y0, x1, y1, 0
+	return SidePanelViewName, x0, y0, x1, y1, gocui.RIGHT
 }
 
 func DataView(termSizeX, termSizeY int) (string, int, int, int, int, byte) {
@@ -36,12 +36,12 @@ func DataView(termSizeX, termSizeY int) (string, int, int, int, int, byte) {
 	return DataTableViewName, x0, y0, x1, y1, 0
 }
 
-func CommandBar(termSizeX, termSizeY int) (string, int, int, int, int, byte) {
+func CommandBar(termSizeX, termSizeY, extraHeight int) (string, int, int, int, int, byte) {
 	termSizeX -= edgeOffset
 	termSizeY -= commandBarHeight
 	x0, x1 := 0, termSizeX
 	y0, y1 := termSizeY-commandBarHeight, termSizeY
-	return CommandBarViewName, x0, y0, x1, y1, 0
+	return CommandBarViewName, x0, y0 - extraHeight, x1, y1, 0
 }
 
 func HelpBar(termSizeX, termSizeY int) (string, int, int, int, int, byte) {
@@ -54,12 +54,12 @@ func HelpBar(termSizeX, termSizeY int) (string, int, int, int, int, byte) {
 func SetSidePanelInactiveColors(view *gocui.View) {
 	view.FgColor = gocui.AttrDim
 	view.BgColor = gocui.AttrDim
-	view.SelFgColor = DefaultTextColor
+	view.SelFgColor = DefaultForegroundColor
 	view.SelBgColor = DefaultBackgroundColor
 }
 
 func SetSidePanelColors(view *gocui.View) {
-	view.FgColor = DefaultTextColor
+	view.FgColor = DefaultForegroundColor
 	view.BgColor = DefaultBackgroundColor
 	view.SelFgColor = gocui.AttrReverse
 	view.SelBgColor = gocui.AttrReverse

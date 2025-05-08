@@ -112,7 +112,7 @@ func (context *DatabaseContext) FetchCounts(tables []string) []string {
 }
 
 func (context *DatabaseContext) FetchTable(selectedTable string) ([]Column, []Row, error) { // context.FetchLimitOffset += context.FetchLimit
-	opts := query.Option{Limit: context.FetchLimit, Offset: context.FetchLimitOffset}
+	opts := query.Statement{Limit: context.FetchLimit, Offset: context.FetchLimitOffset}
 	dbRows, err := context.DB.Query(context.Driver.SelectAllQuery(selectedTable, opts))
 	if err != nil {
 		logger.Warn(err)

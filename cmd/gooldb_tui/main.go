@@ -26,11 +26,10 @@ func main() {
 
 	logger.Info("Tui Create")
 	tui := tui.Create(notifier, gool)
-	defer tui.Gui.Close()
 
 	logger.Info("Tui Run")
 	err := panicRecovery(func() error {
-		return tui.MainLoop()
+		return tui.Run()
 	}, logger)
 
 	if err != nil && err != gocui.ErrQuit {

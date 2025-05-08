@@ -3,161 +3,166 @@ package tui
 import (
 	"fmt"
 
+	"github.com/ctrl-alt-boop/gooldb/tui/config"
 	"github.com/ctrl-alt-boop/gooldb/tui/views"
 	"github.com/jesseduffield/gocui"
 )
 
-func (tui *Tui) setKeybinds() {
-	tui.setSidePanelKeybinds()
+// ApplyKeybindingConfig applies keybindings from the provided configuration.
+func (tui *Tui) ApplyKeybindingConfig(appConfig *config.AppConfig) {
+	actionHandlers := tui.getActionHandlers()
 
-	tui.setDataviewKeybinds()
+	for _, kb := range appConfig.Keybindings {
+		handler, ok := actionHandlers[kb.Action]
+		if !ok {
+			logger.Warnf("Unknown action '%s' in keybinding config", kb.Action)
+			continue
+		}
 
-	tui.setTableCellKeybinds()
+		gocuiKey, gocuiMod, err := config.ParseKeyString(kb.Key)
+		if err != nil {
+			logger.Warnf("Failed to parse key '%s' for action '%s': %v", kb.Key, kb.Action, err)
+			continue
+		}
 
-	tui.setCommandBarKeybinds()
+		viewName := kb.View
 
-	if err := tui.SetKeybinding("", gocui.KeyTab, gocui.ModNone, tui.cycleCurrentView()); err != nil {
-		logger.Panic(err)
-	}
-
-	if err := tui.SetKeybinding("", gocui.KeyF5, gocui.ModNone, OnF5Pressed(tui)); err != nil {
-		logger.Panic(err)
-	}
-
-	if err := tui.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, Quit); err != nil {
-		logger.Panic(err)
+		if err := tui.SetKeybinding(viewName, gocuiKey, gocuiMod, handler); err != nil {
+			// Log error instead of panic for individual keybinding failures
+			logger.Errorf("Failed to set keybinding for action '%s' (key: '%s', view: '%s'): %v", kb.Action, kb.Key, viewName, err)
+		}
 	}
 }
 
-func (tui *Tui) setSidePanelKeybinds() {
-	if err := tui.SetKeybinding(views.SidePanelViewName, gocui.KeyEnter, gocui.ModNone, tui.sidePanel.OnEnterPressed(tui.goolDb)); err != nil {
-		logger.Panic(err)
-	}
-	if err := tui.SetKeybinding(views.SidePanelViewName, gocui.KeyArrowUp, gocui.ModNone, tui.sidePanel.MoveCursorUp()); err != nil {
-		logger.Panic(err)
-	}
-	if err := tui.SetKeybinding(views.SidePanelViewName, gocui.KeyArrowDown, gocui.ModNone, tui.sidePanel.MoveCursorDown()); err != nil {
-		logger.Panic(err)
-	}
-	if err := tui.SetKeybinding(views.SidePanelViewName, 'k', gocui.ModNone, tui.sidePanel.MoveCursorUp()); err != nil {
-		logger.Panic(err)
-	}
-	if err := tui.SetKeybinding(views.SidePanelViewName, 'j', gocui.ModNone, tui.sidePanel.MoveCursorDown()); err != nil {
-		logger.Panic(err)
+// getActionHandlers returns a map of action strings to their corresponding handler functions.
+func (tui *Tui) getActionHandlers() map[string]func(*gocui.Gui, *gocui.View) error {
+	return map[string]func(*gocui.Gui, *gocui.View) error{
+		"quit":         Quit,
+		"cycle_view":   tui.cycleCurrentView(),
+		"refresh_view": tui.OnF5Pressed(),
+
+		"sidepanel_enter":    tui.sidePanel.OnEnterPressed(tui.goolDb),
+		"sidepanel_up":       tui.sidePanel.MoveCursorUp(),
+		"sidepanel_down":     tui.sidePanel.MoveCursorDown(),
+		"sidepanel_up_alt":   tui.sidePanel.MoveCursorUp(),   // For 'k'
+		"sidepanel_down_alt": tui.sidePanel.MoveCursorDown(), // For 'j'
+
+		"dataview_up":        tui.dataView.MoveRowUp(),
+		"dataview_down":      tui.dataView.MoveRowDown(),
+		"dataview_left":      tui.dataView.MoveColumnLeft(),
+		"dataview_right":     tui.dataView.MoveColumnRight(),
+		"dataview_up_alt":    tui.dataView.MoveRowUp(),       // For 'k'
+		"dataview_down_alt":  tui.dataView.MoveRowDown(),     // For 'j'
+		"dataview_left_alt":  tui.dataView.MoveColumnLeft(),  // For 'h'
+		"dataview_right_alt": tui.dataView.MoveColumnRight(), // For 'l'
+
+		"tablecell_open":        tui.onDataViewEnter(),
+		"tablecell_close":       tui.onTableCellClose(),
+		"tablecell_scroll_up":   tui.onTableCellScrollUp(),
+		"tablecell_scroll_down": tui.onTableCellScrollDown(),
+
+		"commandbar_activate": tui.onCommandBarOpen(),
+		"commandbar_close":    tui.onCommandBarClose(),
+		"commandbar_enter":    tui.onCommandBarEnter(),
 	}
 }
 
-func (tui *Tui) setDataviewKeybinds() {
-	if err := tui.SetKeybinding(views.DataTableViewName, gocui.KeyArrowUp, gocui.ModNone, tui.dataView.MoveRowUp()); err != nil {
-		logger.Panic(err)
-	}
-	if err := tui.SetKeybinding(views.DataTableViewName, gocui.KeyArrowDown, gocui.ModNone, tui.dataView.MoveRowDown()); err != nil {
-		logger.Panic(err)
-	}
-	if err := tui.SetKeybinding(views.DataTableViewName, gocui.KeyArrowLeft, gocui.ModNone, tui.dataView.MoveColumnLeft()); err != nil {
-		logger.Panic(err)
-	}
-	if err := tui.SetKeybinding(views.DataTableViewName, gocui.KeyArrowRight, gocui.ModNone, tui.dataView.MoveColumnRight()); err != nil {
-		logger.Panic(err)
-	}
-	if err := tui.SetKeybinding(views.DataTableViewName, 'k', gocui.ModNone, tui.dataView.MoveRowUp()); err != nil {
-		logger.Panic(err)
-	}
-	if err := tui.SetKeybinding(views.DataTableViewName, 'j', gocui.ModNone, tui.dataView.MoveRowDown()); err != nil {
-		logger.Panic(err)
-	}
-	if err := tui.SetKeybinding(views.DataTableViewName, 'h', gocui.ModNone, tui.dataView.MoveColumnLeft()); err != nil {
-		logger.Panic(err)
-	}
-	if err := tui.SetKeybinding(views.DataTableViewName, 'l', gocui.ModNone, tui.dataView.MoveColumnRight()); err != nil {
-		logger.Panic(err)
-	}
-	if err := tui.SetKeybinding(views.DataTableViewName, gocui.KeyEnter, gocui.ModNone, func(g *gocui.Gui, v *gocui.View) error {
-		g.Update(func(g *gocui.Gui) error {
+func (tui *Tui) onDataViewEnter() func(_ *gocui.Gui, _ *gocui.View) error {
+	return func(_ *gocui.Gui, dataTableView *gocui.View) error {
+		tui.Update(func(_ *gocui.Gui) error {
 			data := tui.dataView.GetSelectedCellData()
+			x0, y0, x1, y1 := dataTableView.Dimensions()
 
-			x0, y0, x1, y1 := v.Dimensions()
-			dataView, err := g.SetView(views.TableCellViewName, x0+5, y0+5, x1-5, y1-5, 0)
-
+			popupView, err := tui.SetView(views.TableCellViewName, x0+5, y0+5, x1-5, y1-5, 0)
 			if err != nil {
 				if !gocui.IsUnknownView(err) {
-					logger.Panic(err)
+					return err
 				}
-				dataView.Frame = true
-				dataView.Wrap = true
-				dataView.Editable = false
+				popupView.Frame = true
+				popupView.Wrap = true
+				popupView.Editable = false
 			}
-			dataView.Clear()
-			fmt.Fprint(dataView, data)
-			g.SetCurrentView(views.TableCellViewName)
-			g.SetViewOnTop(views.TableCellViewName)
+			popupView.Clear()
+			fmt.Fprint(popupView, data)
+
+			tui.SetCurrentView(views.TableCellViewName)
+			tui.SetViewOnTop(views.TableCellViewName)
+
 			return nil
 		})
 		return nil
-	}); err != nil {
-		logger.Panic(err)
 	}
-
 }
 
-func (tui *Tui) setTableCellKeybinds() {
-	if err := tui.SetKeybinding(views.TableCellViewName, gocui.KeyEsc, gocui.ModNone, func(g *gocui.Gui, _ *gocui.View) error {
-		if err := g.DeleteView(views.TableCellViewName); err != nil {
-			logger.Panic(err)
+func (tui *Tui) onTableCellClose() func(_ *gocui.Gui, _ *gocui.View) error {
+	return func(_ *gocui.Gui, _ *gocui.View) error {
+		if err := tui.DeleteView(views.TableCellViewName); err != nil {
+			if !gocui.IsUnknownView(err) {
+				logger.Warnf("Error deleting TableCellView: %v", err)
+			}
 		}
-		g.SetCurrentView(views.DataTableViewName)
+		tui.SetCurrentView(tui.prevView)
 		return nil
-	}); err != nil {
-		logger.Panic(err)
-	}
-
-	// TableCell movement
-	if err := tui.SetKeybinding(views.TableCellViewName, gocui.KeyArrowUp, gocui.ModNone, func(g *gocui.Gui, tableCellView *gocui.View) error {
-		tableCellView.ScrollUp(3)
-		return nil
-	}); err != nil {
-		logger.Panic(err)
-	}
-	if err := tui.SetKeybinding(views.TableCellViewName, gocui.KeyArrowDown, gocui.ModNone, func(g *gocui.Gui, tableCellView *gocui.View) error {
-		tableCellView.ScrollDown(3)
-		return nil
-	}); err != nil {
-		logger.Panic(err)
 	}
 }
 
-func (tui *Tui) setCommandBarKeybinds() {
-	if err := tui.SetKeybinding("", ':', gocui.ModNone, func(g *gocui.Gui, prevView *gocui.View) error {
-		commandBarView, err := g.View(views.CommandBarViewName)
+func (tui *Tui) onTableCellScrollUp() func(_ *gocui.Gui, _ *gocui.View) error {
+	return func(_ *gocui.Gui, tableCellView *gocui.View) error {
+		if tableCellView != nil {
+			tableCellView.ScrollUp(3)
+		}
+		return nil
+	}
+}
+
+func (tui *Tui) onTableCellScrollDown() func(_ *gocui.Gui, _ *gocui.View) error {
+	return func(_ *gocui.Gui, tableCellView *gocui.View) error {
+		if tableCellView != nil {
+			tableCellView.ScrollDown(3)
+		}
+		return nil
+	}
+}
+
+func (tui *Tui) onCommandBarEnter() func(_ *gocui.Gui, _ *gocui.View) error {
+	return func(_ *gocui.Gui, _ *gocui.View) error {
+		executed, err := tui.commandBar.KeyEnter()
+		if executed {
+			tui.commandBar.Close(tui.Gui)
+
+			// tui.prevView was set when CommandBar was activated.
+			// This restores to the view active before command bar.
+			tui.previousView()
+		}
 		if err != nil {
-			logger.Panic(err)
+			logger.Warnf("Command execution error: %v", err)
+			return err
 		}
-		g.Update(func(g *gocui.Gui) error {
-			commandBarView.Clear()
-			commandBarView.SetCursor(0, 0)
-			return nil
-		})
-		g.Cursor = true
 
-		tui.prevView = prevView.Name()
-		g.SetCurrentView(views.CommandBarViewName)
 		return nil
-	}); err != nil {
-		logger.Panic(err)
 	}
-	if err := tui.SetKeybinding(views.CommandBarViewName, gocui.KeyEsc, gocui.ModNone, func(g *gocui.Gui, commandBarView *gocui.View) error {
-		g.Cursor = false
-		g.Update(func(g *gocui.Gui) error {
-			commandBarView.Clear()
-			fmt.Fprint(commandBarView, ">")
-			return nil
-		})
-		g.SetCurrentView(tui.prevView)
+}
+
+func (tui *Tui) onCommandBarOpen() func(_ *gocui.Gui, _ *gocui.View) error {
+	return func(_ *gocui.Gui, _ *gocui.View) error {
+		tui.commandBar.Open(tui.Gui)
+
+		tui.SetCurrentView(views.CommandBarViewName)
 		return nil
-	}); err != nil {
-		logger.Panic(err)
 	}
-	if err := tui.SetKeybinding(views.CommandBarViewName, gocui.KeyEnter, gocui.ModNone, tui.commandBar.OnEnterPressed(tui.goolDb)); err != nil {
-		logger.Panic(err)
+}
+
+func (tui *Tui) onCommandBarClose() func(_ *gocui.Gui, _ *gocui.View) error {
+	return func(_ *gocui.Gui, _ *gocui.View) error {
+		tui.commandBar.Close(tui.Gui)
+
+		// tui.prevView was set when CommandBar was activated.
+		// This restores to the view active before command bar.
+		tui.previousView()
+		return nil
 	}
+}
+
+func Quit(g *gocui.Gui, v *gocui.View) error {
+	return gocui.ErrQuit
 }
