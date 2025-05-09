@@ -12,6 +12,7 @@ const (
 	commandBarHeight    int = 2
 	helpBarHeight       int = 2
 	columnPadding       int = 2
+	modalMargin         int = 5
 )
 
 var DefaultForegroundColor = gocui.ColorDefault
@@ -25,7 +26,7 @@ func SidePanel(termSizeX, termSizeY int) (string, int, int, int, int, byte) {
 	termSizeY -= commandBarHeight + helpBarHeight
 	x0, x1 := 0, termSizeX
 	y0, y1 := 0, termSizeY
-	return SidePanelViewName, x0, y0, x1, y1, gocui.RIGHT
+	return SidePanelViewName, x0, y0, x1, y1, 0 //gocui.RIGHT
 }
 
 func DataView(termSizeX, termSizeY int) (string, int, int, int, int, byte) {
@@ -50,6 +51,17 @@ func HelpBar(termSizeX, termSizeY int) (string, int, int, int, int, byte) {
 	y0, y1 := termSizeY-helpBarHeight, termSizeY
 	return HelpFooterName, x0, y0, x1, y1, 0
 }
+
+func Popup(name string, dimensionsFunc func() (int, int, int, int)) (string, int, int, int, int, byte) {
+	x0, y0, x1, y1 := dimensionsFunc()
+	return name, x0 + modalMargin, y0 + modalMargin, x1 - modalMargin, y1 - modalMargin, 0
+}
+
+// func Popup(name string, dataTableX0, dataTableY0, dataTableX1, dataTableY1 int) (string, int, int, int, int, byte) {
+// 	x0, x1 := dataTableX0+modalMargin, dataTableX1-modalMargin
+// 	y0, y1 := dataTableY0+modalMargin, dataTableY1-modalMargin
+// 	return name, x0, y0, x1, y1, 0
+// }
 
 func SetSidePanelInactiveColors(view *gocui.View) {
 	view.FgColor = gocui.AttrDim

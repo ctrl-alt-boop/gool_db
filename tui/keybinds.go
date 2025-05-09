@@ -39,9 +39,10 @@ func (tui *Tui) getActionHandlers() map[string]func(*gocui.Gui, *gocui.View) err
 	return map[string]func(*gocui.Gui, *gocui.View) error{
 		"quit":         Quit,
 		"cycle_view":   tui.cycleCurrentView(),
-		"refresh_view": tui.OnF5Pressed(),
+		"refresh_view": tui.onF5Pressed(),
 
-		"sidepanel_enter":    tui.sidePanel.OnEnterPressed(tui.goolDb),
+		"sidepanel_select":   tui.sidePanel.OnSelect(tui.goolDb),
+		"sidepanel_back":     tui.sidePanel.OnBack(tui.goolDb),
 		"sidepanel_up":       tui.sidePanel.MoveCursorUp(),
 		"sidepanel_down":     tui.sidePanel.MoveCursorDown(),
 		"sidepanel_up_alt":   tui.sidePanel.MoveCursorUp(),   // For 'k'
@@ -56,18 +57,22 @@ func (tui *Tui) getActionHandlers() map[string]func(*gocui.Gui, *gocui.View) err
 		"dataview_left_alt":  tui.dataView.MoveColumnLeft(),  // For 'h'
 		"dataview_right_alt": tui.dataView.MoveColumnRight(), // For 'l'
 
-		"tablecell_open":        tui.onDataViewEnter(),
+		"tablecell_open":        tui.onTableCellOpen(),
 		"tablecell_close":       tui.onTableCellClose(),
 		"tablecell_scroll_up":   tui.onTableCellScrollUp(),
 		"tablecell_scroll_down": tui.onTableCellScrollDown(),
 
-		"commandbar_activate": tui.onCommandBarOpen(),
-		"commandbar_close":    tui.onCommandBarClose(),
-		"commandbar_enter":    tui.onCommandBarEnter(),
+		"commandbar_open":  tui.onCommandBarOpen(),
+		"commandbar_close": tui.onCommandBarClose(),
+		"commandbar_enter": tui.onCommandBarEnter(),
+
+		"queryoptions_open":  tui.onQueryOptionsOpen(),
+		"queryoptions_close": tui.onQueryOptionsClose(),
+		"queryoptions_enter": tui.onQueryOptionsEnter(),
 	}
 }
 
-func (tui *Tui) onDataViewEnter() func(_ *gocui.Gui, _ *gocui.View) error {
+func (tui *Tui) onTableCellOpen() func(_ *gocui.Gui, _ *gocui.View) error {
 	return func(_ *gocui.Gui, dataTableView *gocui.View) error {
 		tui.Update(func(_ *gocui.Gui) error {
 			data := tui.dataView.GetSelectedCellData()
@@ -124,6 +129,26 @@ func (tui *Tui) onTableCellScrollDown() func(_ *gocui.Gui, _ *gocui.View) error 
 	}
 }
 
+func (tui *Tui) onCommandBarOpen() func(_ *gocui.Gui, _ *gocui.View) error {
+	return func(_ *gocui.Gui, _ *gocui.View) error {
+		tui.commandBar.Open(tui.Gui)
+
+		tui.SetCurrentView(views.CommandBarViewName)
+		return nil
+	}
+}
+
+func (tui *Tui) onCommandBarClose() func(_ *gocui.Gui, _ *gocui.View) error {
+	return func(_ *gocui.Gui, _ *gocui.View) error {
+		tui.commandBar.Close(tui.Gui)
+
+		// tui.prevView was set when CommandBar was activated.
+		// This restores to the view active before command bar.
+		tui.previousView()
+		return nil
+	}
+}
+
 func (tui *Tui) onCommandBarEnter() func(_ *gocui.Gui, _ *gocui.View) error {
 	return func(_ *gocui.Gui, _ *gocui.View) error {
 		executed, err := tui.commandBar.KeyEnter()
@@ -143,21 +168,46 @@ func (tui *Tui) onCommandBarEnter() func(_ *gocui.Gui, _ *gocui.View) error {
 	}
 }
 
-func (tui *Tui) onCommandBarOpen() func(_ *gocui.Gui, _ *gocui.View) error {
+func (tui *Tui) onQueryOptionsOpen() func(_ *gocui.Gui, _ *gocui.View) error {
 	return func(_ *gocui.Gui, _ *gocui.View) error {
-		tui.commandBar.Open(tui.Gui)
+		selection, mode := tui.sidePanel.CurrentSelection()
+		if mode != "Tables" {
+			return nil
+		}
+		newQuery := true
+		dataTableSelection := tui.dataView.CurrentTable()
+		if dataTableSelection != "" {
+			selection = dataTableSelection
+			newQuery = false
+		}
 
-		tui.SetCurrentView(views.CommandBarViewName)
+		tui.Update(tui.queryOptions.CreatePopup(newQuery, selection))
+		tui.SetCurrentView(views.QueryOptionsViewName)
+		tui.SetViewOnTop(views.QueryOptionsViewName)
 		return nil
 	}
 }
 
-func (tui *Tui) onCommandBarClose() func(_ *gocui.Gui, _ *gocui.View) error {
+func (tui *Tui) onQueryOptionsClose() func(_ *gocui.Gui, _ *gocui.View) error {
 	return func(_ *gocui.Gui, _ *gocui.View) error {
-		tui.commandBar.Close(tui.Gui)
+		if err := tui.DeleteView(views.QueryOptionsViewName); err != nil {
+			if !gocui.IsUnknownView(err) {
+				logger.Warnf("Error deleting QueryOptionsView: %v", err)
+			}
+		}
+		tui.SetCurrentView(tui.prevView)
+		return nil
+	}
+}
 
-		// tui.prevView was set when CommandBar was activated.
-		// This restores to the view active before command bar.
+func (tui *Tui) onQueryOptionsEnter() func(_ *gocui.Gui, _ *gocui.View) error {
+	return func(_ *gocui.Gui, _ *gocui.View) error {
+		err := tui.queryOptions.KeyEnter()
+		if err != nil {
+			// somethigs check exec
+		}
+		tui.queryOptions.Close(tui.Gui)
+
 		tui.previousView()
 		return nil
 	}

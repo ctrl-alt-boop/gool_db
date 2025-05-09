@@ -16,10 +16,11 @@ type Tui struct {
 	*gocui.Gui
 	goolDb *gooldb.GoolDb
 
-	sidePanel  *views.SidePanelView
-	commandBar *views.CommandBarView
-	dataView   *views.DataTableView
-	helpFooter *views.HelpFooterView
+	sidePanel    *views.SidePanelView
+	commandBar   *views.CommandBarView
+	dataView     *views.DataTableView
+	queryOptions *views.QueryOptionsView
+	helpFooter   *views.HelpFooterView
 
 	notificationHandler *views.NotificationHandler
 	prevView            string
@@ -71,6 +72,8 @@ func Create(notifier *Notifier, goolDb *gooldb.GoolDb) *Tui {
 
 	tui.ApplyKeybindingConfig(appConfig) // Apply the loaded or default keybindings
 
+	tui.ShowListFooter = true
+
 	if notifier != nil {
 		notifier.SetOnNotification(func(level gooldb.NotificationLevel, args ...any) {
 			if tui.notificationHandler != nil {
@@ -84,39 +87,6 @@ func Create(notifier *Notifier, goolDb *gooldb.GoolDb) *Tui {
 	}
 
 	return tui
-}
-
-func (tui *Tui) cycleCurrentView() func(_ *gocui.Gui, _ *gocui.View) error {
-	return func(g *gocui.Gui, currentView *gocui.View) error {
-		var nextViewName string
-
-		switch currentView.Name() {
-		case views.SidePanelViewName:
-			if !tui.dataView.IsTableSet() {
-				return nil
-			}
-			nextViewName = views.DataTableViewName
-			tui.sidePanel.SetInactiveColors()
-
-		case views.DataTableViewName:
-			nextViewName = views.SidePanelViewName
-			tui.dataView.ClearHighlight()
-			tui.sidePanel.SetActiveColors()
-		}
-
-		newActiveView := tui.SetCurrentView(nextViewName)
-
-		if newActiveView != nil {
-			g.Cursor = false
-			if nextViewName == views.DataTableViewName {
-				// newActiveView.SetCursor(1, 1) // TODO: Maybe not
-				// newActiveView.SetOrigin(0, 0) // TODO: Maybe not
-				tui.dataView.HighlightSelectedCell()
-			}
-		}
-
-		return nil
-	}
 }
 
 func (tui *Tui) previousView() {

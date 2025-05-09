@@ -12,14 +12,19 @@ keybindings:
     key: "<f5>"
   - action: "quit"
     key: "<ctrl+c>"
-  - action: "commandbar_activate"
+  - action: "commandbar_open"
     key: ":"
+  - action: "queryoptions_open"
+    key: "f"
     # view: "" is implicit for global
 
   # SidePanelView
-  - action: "sidepanel_enter"
+  - action: "sidepanel_select"
     key: "<enter>"
     view: "SidePanelView" # Must match views.SidePanelViewName
+  - action: "sidepanel_back"
+    key: "<esc>"
+    view: "SidePanelView"
   - action: "sidepanel_up"
     key: "<up>"
     view: "SidePanelView"
@@ -80,3 +85,11 @@ keybindings:
   - action: "commandbar_enter"
     key: "<enter>"
     view: "CommandBarView"
+
+  # QueryOptionsView
+  - action: "queryoptions_close"
+    key: "<esc>"
+    view: "QueryOptionsView" # Must match views.QueryOptionsViewName
+  - action: "queryoptions_enter"
+    key: "<enter>"
+    view: "QueryOptionsView"

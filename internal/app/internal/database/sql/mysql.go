@@ -8,6 +8,11 @@ import (
 
 type MySql struct{}
 
+// SupportsJsonResult implements database.DbDriver.
+func (d *MySql) SupportsJsonResult() bool {
+	panic("unimplemented")
+}
+
 func (d *MySql) ConnectionString(settings *connection.Settings) string {
 	panic("unimplemented")
 }

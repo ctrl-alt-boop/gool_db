@@ -15,24 +15,37 @@ const TableCellViewName string = "data_cell"
 const firstRow = 1
 const maxCellWidth = 36 // Guid length, including the '-'s
 
+type paginationState struct {
+	currentPage   int
+	itemsPerPage  int
+	totalItems    int
+	pagesPerQuery int
+}
+
 type dataViewState struct {
 	currentColumnIndex int
 	currentRowIndex    int
-	columnWidths       []int
-	table              *gooldb.DataTable
-	contentWidth       int
-	maxRows            int
+
+	tableName    string
+	table        *gooldb.DataTable
+	columnWidths []int
+	contentWidth int
 }
 
 type DataTableView struct {
 	view *gocui.View
 	gui  *gocui.Gui
 	// gool  *gooldb.GoolDb
-	state dataViewState
+	state      dataViewState
+	pagination paginationState
 }
 
 func (d *DataTableView) IsTableSet() bool {
 	return d.state.table != nil
+}
+
+func (d *DataTableView) CurrentTable() string {
+	return d.state.tableName
 }
 
 func (d *DataTableView) Layout(g *gocui.Gui) error {
@@ -47,8 +60,13 @@ func (d *DataTableView) Layout(g *gocui.Gui) error {
 		d.view = view
 		d.gui = g
 		d.state = dataViewState{}
+		d.pagination = paginationState{
+			currentPage:   0,
+			totalItems:    0,
+			pagesPerQuery: 2,
+		}
 	}
-	d.state.maxRows = view.InnerHeight() - firstRow
+	d.pagination.itemsPerPage = view.InnerHeight() - firstRow
 	return nil
 }
 
@@ -68,11 +86,17 @@ func (d *DataTableView) OnTableSet(eventArgs any, err error) {
 	if !ok {
 		return
 	}
+	d.state.tableName = args.Selected
 	d.state.table = args.Table
+	d.updateColumnWidths()
+
+	logger.Info(d.getFormatedRow(1))
+
+	formatedHeader := d.getFormatedTitle()
+	formatedRows := d.getFormatedRows()
+
 	d.gui.Update(func(g *gocui.Gui) error {
 		d.view.Clear()
-		formatedRows := d.getFormatedRows()
-		formatedHeader := d.getFormatedTitle()
 		// d.view.Title = formatedHeader
 		fmt.Fprint(d.view, formatedHeader)
 
@@ -89,9 +113,10 @@ func (d *DataTableView) OnTableSet(eventArgs any, err error) {
 }
 
 const (
-	hiStart         = "\x1b[7m"
-	hiEnd           = "\x1b[0m"
-	columnSeparator = " \u2502 "
+	hiStart               = "\x1b[7m"
+	hiEnd                 = "\x1b[0m"
+	columnSeparator       = '\u2502'
+	spacedColumnSeparator = " \u2502 "
 )
 
 func (d *DataTableView) HighlightSelectedCell() {
@@ -101,7 +126,7 @@ func (d *DataTableView) HighlightSelectedCell() {
 	data := strings.Split(buf, "\n")
 	selectionStartIndex := 1 // 0 is a ' '
 	for i := range d.state.columnWidths[:d.state.currentColumnIndex] {
-		selectionStartIndex += d.state.columnWidths[i] + len(columnSeparator)
+		selectionStartIndex += d.state.columnWidths[i] + len(spacedColumnSeparator)
 	}
 	selectionEndIndex := selectionStartIndex + d.state.columnWidths[d.state.currentColumnIndex]
 	highlightedData := data[d.state.currentRowIndex][:selectionStartIndex] + hiStart + data[d.state.currentRowIndex][selectionStartIndex:selectionEndIndex] + hiEnd + data[d.state.currentRowIndex][selectionEndIndex:]
@@ -152,7 +177,7 @@ func (d *DataTableView) MoveColumnLeft() func(*gocui.Gui, *gocui.View) error {
 		}
 		selectionStartX := 1 // 0 is a ' '
 		for i := range d.state.currentColumnIndex {
-			selectionStartX += d.state.columnWidths[i] + runewidth.StringWidth(columnSeparator)
+			selectionStartX += d.state.columnWidths[i] + runewidth.StringWidth(spacedColumnSeparator)
 		}
 
 		ox := dataTableView.OriginX()
@@ -180,7 +205,7 @@ func (d *DataTableView) MoveColumnRight() func(*gocui.Gui, *gocui.View) error {
 
 		selectionStartX := 1 // 0 is a ' '
 		for i := range d.state.currentColumnIndex {
-			selectionStartX += d.state.columnWidths[i] + runewidth.StringWidth(columnSeparator)
+			selectionStartX += d.state.columnWidths[i] + runewidth.StringWidth(spacedColumnSeparator)
 		}
 		selectionEndX := selectionStartX + d.state.columnWidths[d.state.currentColumnIndex]
 
@@ -226,11 +251,8 @@ func (d *DataTableView) MoveRowDown() func(*gocui.Gui, *gocui.View) error {
 	}
 }
 
-func (d *DataTableView) getFormatedRows() []string {
+func (d *DataTableView) updateColumnWidths() {
 	d.state.columnWidths = make([]int, d.state.table.NumColumns())
-	if d.state.table.NumRows() == 0 {
-		return []string{}
-	}
 	for i := range d.state.table.Rows() {
 		row := d.state.table.GetRowStrings(i)
 		for columnIndex, value := range row {
@@ -245,21 +267,28 @@ func (d *DataTableView) getFormatedRows() []string {
 			}
 		}
 	}
+}
+
+func (d *DataTableView) getFormatedRow(i int) string {
+	widths := d.state.columnWidths
+	row := d.state.table.GetRowStrings(i)
+	formatedRow := ""
+	for columnIndex, value := range row {
+		crumbs, valLength := "", d.state.columnWidths[columnIndex]
+		if len(value) > widths[columnIndex] {
+			crumbs = "..."
+			valLength -= 3
+		}
+		cell := fmt.Sprintf(" %-*.*s%s %c", valLength, valLength, value, crumbs, columnSeparator)
+		formatedRow += cell
+	}
+	return formatedRow
+}
+
+func (d *DataTableView) getFormatedRows() []string {
 	formatedRows := make([]string, d.state.table.NumRows())
 	for i := range d.state.table.Rows() {
-		row := d.state.table.GetRowStrings(i)
-		for columnIndex, value := range row {
-			cell := ""
-			if len(value) > d.state.columnWidths[columnIndex] {
-				cell = value[:d.state.columnWidths[columnIndex]-3] + "..."
-				logger.Info(cell)
-			} else {
-				cell = value
-			}
-			formatedRows[i] += " " + cell
-			formatedRows[i] += strings.Repeat(" ", d.state.columnWidths[columnIndex]-len(cell)+1)
-			formatedRows[i] += "\u2502"
-		}
+		formatedRows[i] = d.getFormatedRow(i)
 	}
 	// logger.Info("len(formatedRows) = ", len(formatedRows))
 	// logger.Info("maxWidths = ", d.state.columnWidths)

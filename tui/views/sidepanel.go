@@ -13,7 +13,7 @@ var logger = logging.NewLogger("sidepanel.log")
 
 type sidePanelMode int
 
-const SidePanelViewName string = "side_panel"
+const SidePanelViewName string = "sidepanel"
 
 const (
 	DriverList sidePanelMode = iota
@@ -38,6 +38,11 @@ type SidePanelView struct {
 	view        *gocui.View
 	gui         *gocui.Gui
 	currentMode sidePanelMode
+
+	selectedDriver        string
+	selectedDriverIndex   int
+	selectedDatabase      string
+	selectedDatabaseIndex int
 }
 
 func (s *SidePanelView) Layout(g *gocui.Gui) error {
@@ -51,18 +56,27 @@ func (s *SidePanelView) Layout(g *gocui.Gui) error {
 		view.Frame = true
 		view.Editable = false
 		view.Highlight = true
+		view.SelFgColor = gocui.AttrReverse
+		view.SelBgColor = gocui.AttrReverse
 
 		g.SetCurrentView(SidePanelViewName)
 		s.gui = g
 		s.view = view
 		s.SetSidePanelMode(DriverList)
-		fmt.Fprint(view, strings.Join(gooldb.SupportedDrivers, "\n"))
+
+		view.SetContent(strings.Join(gooldb.SupportedDrivers, "\n"))
 	}
 
 	return nil
 }
 
-func (s *SidePanelView) OnEnterPressed(gool *gooldb.GoolDb) func(*gocui.Gui, *gocui.View) error {
+func (s *SidePanelView) CurrentSelection() (selection string, mode string) {
+	selection, _ = s.view.Word(s.view.Cursor())
+	mode = s.currentMode.Name()
+	return
+}
+
+func (s *SidePanelView) OnSelect(gool *gooldb.GoolDb) func(*gocui.Gui, *gocui.View) error {
 	return func(_ *gocui.Gui, currentView *gocui.View) error {
 		selection, ok := currentView.Word(currentView.Cursor())
 		if !ok {
@@ -70,11 +84,32 @@ func (s *SidePanelView) OnEnterPressed(gool *gooldb.GoolDb) func(*gocui.Gui, *go
 		}
 		switch s.currentMode {
 		case DriverList:
+			s.selectedDriverIndex = currentView.CursorY()
 			gool.SelectDriver(selection)
+			currentView.SetCursorY(0)
+
 		case DatabaseList:
+			s.selectedDatabaseIndex = currentView.CursorY()
 			gool.SelectDatabase(selection)
+			currentView.SetCursorY(0)
+
 		case TableList:
 			gool.SelectTable(selection)
+		}
+		return nil
+	}
+}
+
+func (s *SidePanelView) OnBack(gool *gooldb.GoolDb) func(*gocui.Gui, *gocui.View) error {
+	return func(_ *gocui.Gui, currentView *gocui.View) error {
+		switch s.currentMode {
+		case TableList:
+			gool.SelectDriver(s.selectedDriver)
+			currentView.SetCursorY(s.selectedDatabaseIndex)
+		case DatabaseList:
+			s.SetSidePanelMode(DriverList)
+			s.view.SetContent(strings.Join(gooldb.SupportedDrivers, "\n"))
+			currentView.SetCursorY(s.selectedDriverIndex)
 		}
 		return nil
 	}
@@ -98,6 +133,8 @@ func (s *SidePanelView) OnDriverSet(eventArgs any, err error) {
 		fmt.Fprint(s.view, strings.Join(args.Databases, "\n"))
 		return nil
 	})
+	s.selectedDriver = args.Selected
+	s.selectedDatabase = ""
 }
 
 // selected string, tables []string
@@ -118,15 +155,12 @@ func (s *SidePanelView) OnDatabaseSet(eventArgs any, err error) {
 		fmt.Fprint(s.view, strings.Join(args.Tables, "\n"))
 		return nil
 	})
+	s.selectedDatabase = args.Selected
 }
 
 func (s *SidePanelView) SetSidePanelMode(mode sidePanelMode) {
 	s.currentMode = mode
 	s.view.Title = mode.Name()
-	s.view.Highlight = true
-	s.view.SelFgColor = gocui.AttrReverse
-	s.view.SelBgColor = gocui.AttrReverse
-	s.view.SetCursor(0, 0)
 
 	s.view.Clear()
 }

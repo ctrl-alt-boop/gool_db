@@ -150,10 +150,12 @@ func GetDefaultKeybindings() *AppConfig {
 			{Action: "cycle_view", Key: "<tab>", View: ""},
 			{Action: "refresh_view", Key: "<f5>", View: ""},
 			{Action: "quit", Key: "<ctrl+c>", View: ""},
-			{Action: "commandbar_activate", Key: ":", View: ""},
+			{Action: "commandbar_open", Key: ":", View: ""},
+			{Action: "queryoptions_open", Key: "f", View: ""},
 
 			// SidePanelView
-			{Action: "sidepanel_enter", Key: "<enter>", View: views.SidePanelViewName},
+			{Action: "sidepanel_select", Key: "<enter>", View: views.SidePanelViewName},
+			{Action: "sidepanel_back", Key: "<esc>", View: views.SidePanelViewName},
 			{Action: "sidepanel_up", Key: "<up>", View: views.SidePanelViewName},
 			{Action: "sidepanel_down", Key: "<down>", View: views.SidePanelViewName},
 			{Action: "sidepanel_up_alt", Key: "k", View: views.SidePanelViewName},
@@ -178,6 +180,10 @@ func GetDefaultKeybindings() *AppConfig {
 			// CommandBarView
 			{Action: "commandbar_close", Key: "<esc>", View: views.CommandBarViewName},
 			{Action: "commandbar_enter", Key: "<enter>", View: views.CommandBarViewName},
+
+			// QueryOptionsView
+			{Action: "queryoptions_close", Key: "<esc>", View: views.QueryOptionsViewName},
+			{Action: "queryoptions_enter", Key: "<enter>", View: views.QueryOptionsViewName},
 		},
 	}
 }

@@ -8,6 +8,11 @@ import (
 
 type SQLite3 struct{}
 
+// SupportsJsonResult implements database.DbDriver.
+func (d *SQLite3) SupportsJsonResult() bool {
+	panic("unimplemented")
+}
+
 // ConnectionString implements database.GoolDbDriver.
 func (d *SQLite3) ConnectionString(settings *connection.Settings) string {
 	panic("unimplemented")

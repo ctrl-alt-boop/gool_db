@@ -10,7 +10,19 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	selectTemplate = `SELECT {{.Columns}} FROM {{.Table}} WHERE {{.Where}} ORDER BY {{.OrderBy}} LIMIT {{.Limit}} OFFSET {{.Offset}}`
+	insertTemplate = `INSERT INTO {{.Table}} ({{.Columns}}) VALUES ({{.Values}})`
+	updateTemplate = `UPDATE {{.Table}} SET {{.Set}} WHERE {{.Where}}`
+	deleteTemplate = `DELETE FROM {{.Table}} WHERE {{.Where}}`
+)
+
 type Postgres struct{}
+
+// SupportsJsonResult implements database.DbDriver.
+func (d *Postgres) SupportsJsonResult() bool {
+	return true
+}
 
 func (d *Postgres) ConnectionString(settings *connection.Settings) string {
 	connString := ""
@@ -73,6 +85,40 @@ func (d *Postgres) ResolveDatabaseType(dbType string, value []byte) (any, error)
 	default:
 		return string(value), nil
 	}
+}
+
+func (d *Postgres) TablePropertiesQuery(table string) string {
+	return ""
+}
+
+func (d *Postgres) TableIndexesQuery(table string) string {
+	return ""
+}
+
+func (d *Postgres) TableSizeQuery(table string) string {
+	return ""
+}
+
+func (d *Postgres) DatabasePropertiesQuery(database string) string {
+	return ""
+}
+
+func (d *Postgres) DatabaseSizeQuery(database string) string {
+	return ""
+}
+
+// internal
+const (
+	jsonRow query.SqlMethod = "SELECT row_to_json(t) FROM %s t"
+	jsonAgg query.SqlMethod = "SELECT json_agg(row_to_json(t)) FROM %s t"
+)
+
+func (d *Postgres) WithJsonRow(statement *query.Statement) {
+	statement.Method = jsonRow
+}
+
+func (d *Postgres) WithJsonAgg(statement *query.Statement) {
+	statement.Method = jsonAgg
 }
 
 func buildQueryOptions(opts query.Statement) string {

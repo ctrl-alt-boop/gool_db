@@ -14,8 +14,13 @@ const (
 )
 
 type DbDriver interface {
+	SupportsJsonResult() bool
+
 	Load() error
 	ConnectionString(settings *connection.Settings) string
+
+	// CustomQuery(opts query.Statement)
+
 	DatabasesQuery() string
 	DatabaseNameQuery() string
 	TableNamesQuery() string

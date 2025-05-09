@@ -26,6 +26,7 @@ type DatabaseSetEvent struct {
 
 type TableSetEvent struct {
 	Selected string
+	Count    int
 	Table    *DataTable
 }
 

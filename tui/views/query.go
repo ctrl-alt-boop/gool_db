@@ -7,7 +7,7 @@ import (
 	"github.com/jesseduffield/gocui"
 )
 
-const QueryOptionsViewName = "query_options"
+const QueryOptionsViewName string = "query_options"
 
 type QueryOptionsView struct {
 	view *gocui.View
@@ -15,6 +15,22 @@ type QueryOptionsView struct {
 
 	table          string
 	currentOptions query.Statement
+}
+
+func (q *QueryOptionsView) InitQueryOptions(view *gocui.View, newQuery bool, selection string) {
+	panic("unimplemented")
+}
+
+func (q *QueryOptionsView) Open(gui *gocui.Gui) {
+	panic("unimplemented")
+}
+
+func (q *QueryOptionsView) KeyEnter() error {
+	panic("unimplemented")
+}
+
+func (q *QueryOptionsView) Close(gui *gocui.Gui) {
+	panic("unimplemented")
 }
 
 func (q *QueryOptionsView) Layout(gui *gocui.Gui) error {
@@ -41,4 +57,33 @@ func (q *QueryOptionsView) OnEnterPressed() func(*gocui.Gui, *gocui.View) error 
 
 		return nil
 	}
+}
+
+func (q *QueryOptionsView) CreatePopup(newQuery bool, selection string) func(_ *gocui.Gui) error {
+	return func(g *gocui.Gui) error {
+		dataTableView, err := g.View(DataTableViewName)
+		if err != nil {
+			return err
+		}
+		popupView, err := g.SetView(Popup(QueryOptionsViewName, dataTableView.Dimensions))
+		if err != nil {
+			if !gocui.IsUnknownView(err) {
+				return err
+			}
+			popupView.Frame = true
+			popupView.Wrap = true
+			popupView.Editable = false
+			if newQuery {
+				popupView.Title = fmt.Sprintf("New Query for %s", selection)
+			} else {
+				popupView.Title = fmt.Sprintf("SELECT * FROM %s WHERE ...", selection)
+			}
+			popupView.SetContent(q.CreateContent(newQuery, selection))
+		}
+		return nil
+	}
+}
+
+func (q *QueryOptionsView) CreateContent(newQuery bool, selection string) string {
+	panic("unimplemented")
 }
