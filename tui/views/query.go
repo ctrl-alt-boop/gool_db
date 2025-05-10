@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/ctrl-alt-boop/gooldb/pkg/query"
+	"github.com/ctrl-alt-boop/gooldb/tui/templates"
 	"github.com/jesseduffield/gocui"
 )
 
@@ -14,7 +15,7 @@ type QueryOptionsView struct {
 	gui  *gocui.Gui
 
 	table          string
-	currentOptions query.Statement
+	currentOptions *query.Statement
 }
 
 func (q *QueryOptionsView) InitQueryOptions(view *gocui.View, newQuery bool, selection string) {
@@ -22,7 +23,8 @@ func (q *QueryOptionsView) InitQueryOptions(view *gocui.View, newQuery bool, sel
 }
 
 func (q *QueryOptionsView) Open(gui *gocui.Gui) {
-	panic("unimplemented")
+	tmpl := templates.QueryOptions()
+	tmpl.Execute(q.view, q.currentOptions)
 }
 
 func (q *QueryOptionsView) KeyEnter() error {
@@ -41,7 +43,7 @@ func (q *QueryOptionsView) Layout(gui *gocui.Gui) error {
 		if !gocui.IsUnknownView(err) {
 			return err
 		}
-		view.Title = fmt.Sprintf("SELECT * FROM %s WHERE ...", q.table)
+		view.Title = fmt.Sprintf("SELECT FROM %s", q.table)
 		view.Highlight = true
 		view.SelBgColor = gocui.AttrReverse
 		view.SelFgColor = gocui.AttrReverse
@@ -70,20 +72,23 @@ func (q *QueryOptionsView) CreatePopup(newQuery bool, selection string) func(_ *
 			if !gocui.IsUnknownView(err) {
 				return err
 			}
+			q.view = popupView
 			popupView.Frame = true
 			popupView.Wrap = true
 			popupView.Editable = false
 			if newQuery {
 				popupView.Title = fmt.Sprintf("New Query for %s", selection)
+				q.currentOptions, _ = query.New(selection, query.Select)
 			} else {
-				popupView.Title = fmt.Sprintf("SELECT * FROM %s WHERE ...", selection)
+				popupView.Title = fmt.Sprintf("SELECT FROM %s", selection)
 			}
-			popupView.SetContent(q.CreateContent(newQuery, selection))
+			q.CreateContent(newQuery, selection)
 		}
 		return nil
 	}
 }
 
-func (q *QueryOptionsView) CreateContent(newQuery bool, selection string) string {
-	panic("unimplemented")
+func (q *QueryOptionsView) CreateContent(newQuery bool, selection string) {
+	tmpl := templates.QueryOptions()
+	tmpl.Execute(q.view, q.currentOptions)
 }
