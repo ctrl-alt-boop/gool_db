@@ -59,7 +59,7 @@ func (dt *DataTable) GetRowColumn(row, column int) (string, error) { // Needs a 
 		return "null", nil
 	default:
 		err := fmt.Errorf("unknown value type %T for %s", value, dt.columns[column].DbType)
-		logger.Info(err)
+		logger.Warn(err)
 		return "", err
 	}
 }

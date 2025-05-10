@@ -68,6 +68,7 @@ func (gool *GoolDb) SelectDriver(name database.DriverName) {
 			connection.WithUser(_user),
 			connection.WithPass(_pass),
 			connection.WithSslMode("disable"),
+			connection.WithDb("postgres"),
 		)
 		if err != nil {
 			logger.Warn(err)
@@ -76,7 +77,7 @@ func (gool *GoolDb) SelectDriver(name database.DriverName) {
 		}
 		context, err := database.Connect(driver, gool.settings)
 		if err != nil {
-			logger.Warn(err, "ip:", gool.settings.Ip, "port:", gool.settings.Port)
+			logger.Warn(err, " ip: ", gool.settings.Ip, " port: ", gool.settings.Port)
 			gool.notifier.Notify(Warning, err)
 			return
 		}

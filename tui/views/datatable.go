@@ -90,8 +90,6 @@ func (d *DataTableView) OnTableSet(eventArgs any, err error) {
 	d.state.table = args.Table
 	d.updateColumnWidths()
 
-	logger.Info(d.getFormatedRow(1))
-
 	formatedHeader := d.getFormatedTitle()
 	formatedRows := d.getFormatedRows()
 
