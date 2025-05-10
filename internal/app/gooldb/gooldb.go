@@ -27,7 +27,7 @@ type GoolDb struct {
 	settings        *connection.Settings
 	databaseContext *database.DatabaseContext
 
-	eventHandlers map[EventType]EventHandler
+	eventHandlers map[EventType][]EventHandler
 }
 
 func Create(log *logging.Logger, notifier Notifier, ip string) *GoolDb {
@@ -36,19 +36,21 @@ func Create(log *logging.Logger, notifier Notifier, ip string) *GoolDb {
 		logger:        log,
 		notifier:      notifier,
 		ip:            ip,
-		eventHandlers: make(map[EventType]EventHandler),
+		eventHandlers: make(map[EventType][]EventHandler),
 	}
 }
 
 func (gool *GoolDb) RegisterEventHandler(eventType EventType, handler EventHandler) {
-	gool.eventHandlers[eventType] = handler
+	handlers, exists := gool.eventHandlers[eventType]
+	if !exists {
+		handlers = make([]EventHandler, 0)
+	}
+	handlers = append(handlers, handler)
+	gool.eventHandlers[eventType] = handlers
 }
 
 func (gool *GoolDb) SelectDriver(name database.DriverName) {
-	handler, exists := gool.eventHandlers[DriverSet]
-	if !exists {
-		logger.Panic("no handler registered for DriverSet event")
-	}
+	handlers, _ := gool.eventHandlers[DriverSet]
 	go func() {
 		driver := database.NameToDriver(name)
 		err := driver.Load()
@@ -85,12 +87,14 @@ func (gool *GoolDb) SelectDriver(name database.DriverName) {
 			Selected:  name,
 			Databases: databases,
 		}
-		handler(eventArgs, err)
+		for _, handler := range handlers {
+			handler(eventArgs, err)
+		}
 	}()
 }
 
 func (gool *GoolDb) SelectDatabase(name string) {
-	handler, exists := gool.eventHandlers[DatabaseSet]
+	handlers, exists := gool.eventHandlers[DatabaseSet]
 	if !exists {
 		logger.Panic("no handler registered for DatabaseSet event")
 	}
@@ -111,12 +115,14 @@ func (gool *GoolDb) SelectDatabase(name string) {
 			Selected: name,
 			Tables:   tables,
 		}
-		handler(eventArgs, err)
+		for _, handler := range handlers {
+			handler(eventArgs, err)
+		}
 	}()
 }
 
 func (gool *GoolDb) SelectTable(name string) {
-	handler, exists := gool.eventHandlers[TableSet]
+	handlers, exists := gool.eventHandlers[TableSet]
 	if !exists {
 		logger.Panic("no handler registered for TableSet event")
 	}
@@ -126,7 +132,9 @@ func (gool *GoolDb) SelectTable(name string) {
 			Selected: name,
 			Table:    table,
 		}
-		handler(eventArgs, err)
+		for _, handler := range handlers {
+			handler(eventArgs, err)
+		}
 	}()
 }
 
