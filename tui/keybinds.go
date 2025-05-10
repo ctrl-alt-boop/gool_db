@@ -181,9 +181,9 @@ func (tui *Tui) onQueryOptionsOpen() func(_ *gocui.Gui, _ *gocui.View) error {
 			newQuery = false
 		}
 
-		tui.Update(tui.queryOptions.CreatePopup(newQuery, selection))
-		tui.SetCurrentView(views.QueryOptionsViewName)
-		tui.SetViewOnTop(views.QueryOptionsViewName)
+		tui.queryOptions.CreatePopup(newQuery, selection)
+		// tui.SetCurrentView(views.QueryOptionsViewName)
+		tui.SetViewOnBottom(views.DataTableViewName)
 		return nil
 	}
 }

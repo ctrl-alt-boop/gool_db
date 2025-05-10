@@ -40,6 +40,7 @@ func Create(notifier *Notifier, goolDb *gooldb.GoolDb) *Tui {
 		GoolDb: goolDb,
 	}
 	dataView := &views.DataTableView{}
+	queryOptions := &views.QueryOptionsView{}
 	helpFooter := &views.HelpFooterView{}
 	notificationHandler := &views.NotificationHandler{}
 
@@ -55,6 +56,7 @@ func Create(notifier *Notifier, goolDb *gooldb.GoolDb) *Tui {
 		sidePanel:           sidePanel,
 		commandBar:          commandBar,
 		dataView:            dataView,
+		queryOptions:        queryOptions,
 		helpFooter:          helpFooter,
 		notificationHandler: notificationHandler,
 		prevView:            "",
