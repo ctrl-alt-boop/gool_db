@@ -6,6 +6,8 @@ import (
 	"github.com/ctrl-alt-boop/gooldb/pkg/logging"
 )
 
+var sqlLogger = logging.NewLogger("sql.log")
+
 const (
 	_user string = "valmatics"
 	_pass string = "valmatics"
@@ -50,7 +52,7 @@ func (gool *GoolDb) RegisterEventHandler(eventType EventType, handler EventHandl
 }
 
 func (gool *GoolDb) SelectDriver(name database.DriverName) {
-	handlers, _ := gool.eventHandlers[DriverSet]
+	handlers := gool.eventHandlers[DriverSet]
 	go func() {
 		driver := database.NameToDriver(name)
 		err := driver.Load()
@@ -65,10 +67,10 @@ func (gool *GoolDb) SelectDriver(name database.DriverName) {
 		gool.settings, err = connection.NewSettings(
 			connection.WithDriver(name),
 			connection.WithIp(gool.ip),
+			connection.WithDb("postgres"),
 			connection.WithUser(_user),
 			connection.WithPass(_pass),
 			connection.WithSslMode("disable"),
-			connection.WithDb("postgres"),
 		)
 		if err != nil {
 			logger.Warn(err)
@@ -81,7 +83,7 @@ func (gool *GoolDb) SelectDriver(name database.DriverName) {
 			gool.notifier.Notify(Warning, err)
 			return
 		}
-
+		context.OnQueryExecuted(gool.onQueryExecuted)
 		gool.databaseContext = context
 		databases, err := gool.databaseContext.FetchDatabases()
 		eventArgs := DriverSetEvent{
@@ -92,6 +94,13 @@ func (gool *GoolDb) SelectDriver(name database.DriverName) {
 			handler(eventArgs, err)
 		}
 	}()
+}
+
+func (gool *GoolDb) onQueryExecuted(query string, err error) {
+	sqlLogger.Info(query)
+	if err != nil {
+		sqlLogger.Error("\t", err)
+	}
 }
 
 func (gool *GoolDb) SelectDatabase(name string) {
@@ -110,6 +119,7 @@ func (gool *GoolDb) SelectDatabase(name string) {
 			gool.notifier.Notify(Warning, err)
 			return
 		}
+		context.OnQueryExecuted(gool.onQueryExecuted)
 		gool.databaseContext = context
 		tables, err := gool.databaseContext.FetchTableNames()
 		eventArgs := DatabaseSetEvent{
@@ -139,7 +149,7 @@ func (gool *GoolDb) SelectTable(name string) {
 	}()
 }
 
-func (gool *GoolDb) FetchCounts(tables []string) []string {
+func (gool *GoolDb) FetchCounts(tables []string) map[string]int {
 	return gool.databaseContext.FetchCounts(tables)
 }
 

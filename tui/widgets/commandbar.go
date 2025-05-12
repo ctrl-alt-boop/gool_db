@@ -1,4 +1,4 @@
-package views
+package widgets
 
 import (
 	"strings"
@@ -16,7 +16,7 @@ const (
 const CommandBarViewName string = "command_bar"
 const commandBarPrompt string = "> "
 
-type CommandBarView struct {
+type CommandBar struct {
 	view   *gocui.View
 	GoolDb *gooldb.GoolDb
 
@@ -26,9 +26,18 @@ type CommandBarView struct {
 	extraHeight int
 }
 
-func (c *CommandBarView) Layout(g *gocui.Gui) error {
+func CreateCommandBar(goolDb *gooldb.GoolDb) *CommandBar {
+	return &CommandBar{
+		GoolDb:       goolDb,
+		prevCommands: make([]string, 0),
+		prevChar:     ' ',
+		extraHeight:  0,
+	}
+}
+
+func (c *CommandBar) Layout(g *gocui.Gui) error {
 	maxX, maxY := g.Size()
-	view, err := g.SetView(CommandBar(maxX, maxY, c.extraHeight))
+	view, err := g.SetView(CommandBarLayout(maxX, maxY, c.extraHeight))
 	if err != nil {
 		if !gocui.IsUnknownView(err) {
 			logger.Panic(err)
@@ -40,15 +49,13 @@ func (c *CommandBarView) Layout(g *gocui.Gui) error {
 		view.Editor = gocui.EditorFunc(c.commandBarEdit)
 
 		c.view = view
-		c.prevCommands = make([]string, 0)
-		c.prevChar = ' '
 		c.view.WriteString(commandBarPrompt)
 		c.view.SetCursorX(2)
 	}
 	return nil
 }
 
-func (c *CommandBarView) Open(g *gocui.Gui) error {
+func (c *CommandBar) Open(g *gocui.Gui) error {
 	g.Cursor = true
 	g.Update(func(_ *gocui.Gui) error {
 		c.view.TextArea.TypeString(commandBarPrompt)
@@ -58,7 +65,7 @@ func (c *CommandBarView) Open(g *gocui.Gui) error {
 	return nil
 }
 
-func (c *CommandBarView) Close(g *gocui.Gui) error {
+func (c *CommandBar) Close(g *gocui.Gui) error {
 	g.Cursor = false
 	c.extraHeight = 0
 	g.Update(func(_ *gocui.Gui) error {
@@ -75,7 +82,7 @@ func (c *CommandBarView) Close(g *gocui.Gui) error {
 	return nil
 }
 
-func (c *CommandBarView) KeyEnter() (executed bool, err error) {
+func (c *CommandBar) KeyEnter() (executed bool, err error) {
 	if c.prevChar == ';' {
 		err = c.executeCommand()
 		executed = true
@@ -89,21 +96,21 @@ func (c *CommandBarView) KeyEnter() (executed bool, err error) {
 	return
 }
 
-func (c *CommandBarView) onBackSpace() {
+func (c *CommandBar) onBackSpace() {
 	if c.view.Buffer() == commandBarPrompt {
 		return
 	}
 	c.view.TextArea.BackSpaceChar()
 }
 
-func (c *CommandBarView) onLeftArrow() {
+func (c *CommandBar) onLeftArrow() {
 	if c.view.Buffer() == commandBarPrompt {
 		return
 	}
 	c.view.TextArea.MoveCursorLeft()
 }
 
-func (c *CommandBarView) executeCommand() error {
+func (c *CommandBar) executeCommand() error {
 	command := c.view.Buffer()[len(commandBarPrompt):]
 	command = strings.ReplaceAll(command, "\n  ", " ")
 	command = strings.TrimSpace(command)
@@ -116,7 +123,7 @@ func (c *CommandBarView) executeCommand() error {
 	return nil
 }
 
-func (c *CommandBarView) commandBarEdit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) bool {
+func (c *CommandBar) commandBarEdit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) bool {
 	switch {
 	case key == gocui.KeyBackspace || key == gocui.KeyBackspace2:
 		c.onBackSpace()

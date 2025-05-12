@@ -11,12 +11,21 @@ import (
 const (
 	LogLevelInfo = iota
 	LogLevelWarn
+	LogLevelError
 	LogLevelPanic
 )
 
 type Logger struct {
 	logger *log.Logger
 	file   *os.File
+}
+
+func (l *Logger) Write(p []byte) (n int, err error) {
+	l.logger.SetPrefix("[INFO]: ")
+	message := l.formatMessage(string(p))
+	l.logger.Println(message)
+	l.logger.SetPrefix("")
+	return len(p), nil
 }
 
 func NewLogger(filename string) *Logger {
@@ -90,7 +99,14 @@ func (l *Logger) Warn(args ...any) {
 }
 
 func (l *Logger) Error(args ...any) {
-	l.logger.SetPrefix("[Error]: ")
+	l.logger.SetPrefix("[ERROR]: ")
+	message := l.formatMessage(args...)
+	l.logger.Println(message)
+	l.logger.SetPrefix("")
+}
+
+func (l *Logger) Fatal(args ...any) {
+	l.logger.SetPrefix("[ERROR]: ")
 	message := l.formatMessage(args...)
 	l.logger.Fatal(message)
 	l.logger.SetPrefix("")
@@ -124,8 +140,15 @@ func (l *Logger) Warnf(format string, args ...any) {
 	l.logger.SetPrefix("")
 }
 
-func (l *Logger) Errorf(format string, args ...any) {
-	l.logger.SetPrefix("[Error]: ")
+func (l *Logger) ErrorF(format string, args ...any) {
+	l.logger.SetPrefix("[ERROR]: ")
+	message := l.formatMessage(fmt.Sprintf(format, args...))
+	l.logger.Println(message)
+	l.logger.SetPrefix("")
+}
+
+func (l *Logger) Fatalf(format string, args ...any) {
+	l.logger.SetPrefix("[ERROR]: ")
 	message := l.formatMessage(fmt.Sprintf(format, args...))
 	l.logger.Fatal(message)
 	l.logger.SetPrefix("")

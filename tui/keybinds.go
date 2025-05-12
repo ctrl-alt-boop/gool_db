@@ -1,10 +1,8 @@
 package tui
 
 import (
-	"fmt"
-
 	"github.com/ctrl-alt-boop/gooldb/tui/config"
-	"github.com/ctrl-alt-boop/gooldb/tui/views"
+	"github.com/ctrl-alt-boop/gooldb/tui/widgets"
 	"github.com/jesseduffield/gocui"
 )
 
@@ -29,7 +27,7 @@ func (tui *Tui) ApplyKeybindingConfig(appConfig *config.AppConfig) {
 
 		if err := tui.SetKeybinding(viewName, gocuiKey, gocuiMod, handler); err != nil {
 			// Log error instead of panic for individual keybinding failures
-			logger.Errorf("Failed to set keybinding for action '%s' (key: '%s', view: '%s'): %v", kb.Action, kb.Key, viewName, err)
+			logger.Fatalf("Failed to set keybinding for action '%s' (key: '%s', view: '%s'): %v", kb.Action, kb.Key, viewName, err)
 		}
 	}
 }
@@ -39,7 +37,7 @@ func (tui *Tui) getActionHandlers() map[string]func(*gocui.Gui, *gocui.View) err
 	return map[string]func(*gocui.Gui, *gocui.View) error{
 		"quit":         Quit,
 		"cycle_view":   tui.cycleCurrentView(),
-		"refresh_view": tui.onF5Pressed(),
+		"refresh_view": tui.sidePanel.ToggleCounts(tui.goolDb.FetchCounts),
 
 		"sidepanel_select":   tui.sidePanel.OnSelect(tui.goolDb),
 		"sidepanel_back":     tui.sidePanel.OnBack(tui.goolDb),
@@ -78,7 +76,7 @@ func (tui *Tui) onTableCellOpen() func(_ *gocui.Gui, _ *gocui.View) error {
 			data := tui.dataView.GetSelectedCellData()
 			x0, y0, x1, y1 := dataTableView.Dimensions()
 
-			popupView, err := tui.SetView(views.TableCellViewName, x0+5, y0+5, x1-5, y1-5, 0)
+			popupView, err := tui.SetView(widgets.TableCellViewName, x0+5, y0+5, x1-5, y1-5, 0)
 			if err != nil {
 				if !gocui.IsUnknownView(err) {
 					return err
@@ -88,10 +86,10 @@ func (tui *Tui) onTableCellOpen() func(_ *gocui.Gui, _ *gocui.View) error {
 				popupView.Editable = false
 			}
 			popupView.Clear()
-			fmt.Fprint(popupView, data)
+			popupView.SetContent(data)
 
-			tui.SetCurrentView(views.TableCellViewName)
-			tui.SetViewOnTop(views.TableCellViewName)
+			tui.SetCurrentView(widgets.TableCellViewName)
+			tui.SetViewOnTop(widgets.TableCellViewName)
 
 			return nil
 		})
@@ -101,7 +99,7 @@ func (tui *Tui) onTableCellOpen() func(_ *gocui.Gui, _ *gocui.View) error {
 
 func (tui *Tui) onTableCellClose() func(_ *gocui.Gui, _ *gocui.View) error {
 	return func(_ *gocui.Gui, _ *gocui.View) error {
-		if err := tui.DeleteView(views.TableCellViewName); err != nil {
+		if err := tui.DeleteView(widgets.TableCellViewName); err != nil {
 			if !gocui.IsUnknownView(err) {
 				logger.Warnf("Error deleting TableCellView: %v", err)
 			}
@@ -133,7 +131,7 @@ func (tui *Tui) onCommandBarOpen() func(_ *gocui.Gui, _ *gocui.View) error {
 	return func(_ *gocui.Gui, _ *gocui.View) error {
 		tui.commandBar.Open(tui.Gui)
 
-		tui.SetCurrentView(views.CommandBarViewName)
+		tui.SetCurrentView(widgets.CommandBarViewName)
 		return nil
 	}
 }
@@ -171,26 +169,32 @@ func (tui *Tui) onCommandBarEnter() func(_ *gocui.Gui, _ *gocui.View) error {
 func (tui *Tui) onQueryOptionsOpen() func(_ *gocui.Gui, _ *gocui.View) error {
 	return func(_ *gocui.Gui, _ *gocui.View) error {
 		selection, mode := tui.sidePanel.CurrentSelection()
-		if mode != "Tables" {
+		logger.Info("onQueryOptionsOpen ", selection, " ", mode)
+		if mode != widgets.TableList {
 			return nil
 		}
 		newQuery := true
 		dataTableSelection := tui.dataView.CurrentTable()
-		if dataTableSelection != "" {
+		if dataTableSelection != "" && tui.CurrentView().Name() == widgets.DataAreaViewName {
 			selection = dataTableSelection
 			newQuery = false
 		}
-
-		tui.queryOptions.CreatePopup(newQuery, selection)
-		// tui.SetCurrentView(views.QueryOptionsViewName)
-		tui.SetViewOnBottom(views.DataTableViewName)
+		tui.SetViewOnBottom(widgets.DataAreaViewName)
+		logger.Info("onQueryOptionsOpen ", selection, " ", newQuery)
+		err := tui.queryOptions.CreatePopup(tui.Gui, newQuery, selection)
+		if err != nil {
+			logger.Warnf("Error creating QueryOptionsView: %v", err)
+			return err
+		}
+		tui.SetCurrentView(widgets.QueryOptionsViewName)
 		return nil
 	}
 }
 
 func (tui *Tui) onQueryOptionsClose() func(_ *gocui.Gui, _ *gocui.View) error {
 	return func(_ *gocui.Gui, _ *gocui.View) error {
-		if err := tui.DeleteView(views.QueryOptionsViewName); err != nil {
+		tui.queryOptions.Close(tui.Gui)
+		if err := tui.DeleteView(widgets.QueryOptionsViewName); err != nil {
 			if !gocui.IsUnknownView(err) {
 				logger.Warnf("Error deleting QueryOptionsView: %v", err)
 			}

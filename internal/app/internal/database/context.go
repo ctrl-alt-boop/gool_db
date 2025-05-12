@@ -17,6 +17,8 @@ type DatabaseContext struct {
 
 	FetchLimit       int
 	FetchLimitOffset int
+
+	onQueryExecuted func(query string, err error)
 }
 
 func CreateDatabaseContext(driverName DriverName, connectionString string) (*DatabaseContext, error) {
@@ -38,13 +40,23 @@ func CreateDatabaseContext(driverName DriverName, connectionString string) (*Dat
 
 		FetchLimit:       DefaultFetchLimit,
 		FetchLimitOffset: 0,
+		onQueryExecuted: func(query string, err error) {
+			if err != nil {
+				logger.Error(err)
+			}
+		},
 	}
 	return context, nil
+}
+
+func (context *DatabaseContext) OnQueryExecuted(f func(query string, err error)) {
+	context.onQueryExecuted = f
 }
 
 func (context *DatabaseContext) FetchDatabases() ([]string, error) {
 	var databases []string
 	rows, err := context.DB.Query(context.Driver.DatabasesQuery())
+	context.onQueryExecuted(context.Driver.DatabasesQuery(), err)
 	if err != nil {
 		return nil, fmt.Errorf("err when context.DB.Query(): %w", err)
 	}
@@ -64,6 +76,7 @@ func (context *DatabaseContext) FetchDatabases() ([]string, error) {
 func (context *DatabaseContext) FetchDatabaseName() (string, error) {
 	var dbName string
 	err := context.DB.QueryRow(context.Driver.DatabaseNameQuery()).Scan(&dbName)
+	context.onQueryExecuted(context.Driver.DatabaseNameQuery(), err)
 	if err != nil {
 		return "", fmt.Errorf("err when context.DB.QueryRow(): %w", err)
 	}
@@ -73,6 +86,7 @@ func (context *DatabaseContext) FetchDatabaseName() (string, error) {
 func (context *DatabaseContext) FetchTableNames() ([]string, error) {
 	var tableNames []string
 	rows, err := context.DB.Query(context.Driver.TableNamesQuery())
+	context.onQueryExecuted(context.Driver.TableNamesQuery(), err)
 	if err != nil {
 		return nil, fmt.Errorf("err when context.DB.Query(): %w", err)
 	}
@@ -92,28 +106,31 @@ func (context *DatabaseContext) FetchTableNames() ([]string, error) {
 func (context *DatabaseContext) FetchCount(table string) (int, error) {
 	var count int
 	err := context.DB.QueryRow(context.Driver.CountQuery(table)).Scan(&count)
+	context.onQueryExecuted(context.Driver.CountQuery(table), err)
 	if err != nil {
 		return 0, fmt.Errorf("err when context.DB.QueryRow(): %w", err)
 	}
 	return count, nil
 }
 
-func (context *DatabaseContext) FetchCounts(tables []string) []string {
-	for index, table := range tables {
+func (context *DatabaseContext) FetchCounts(tables []string) map[string]int {
+	counts := make(map[string]int)
+	for _, table := range tables {
 		count, err := context.FetchCount(table)
 		if err != nil {
-			logger.Warn(err)
-			tables[index] = fmt.Sprintf("%s (%s))", tables[index], err.Error())
+			logger.Error(err)
+			counts[table] = -1
 			continue
 		}
-		tables[index] = fmt.Sprintf("%s (%d entries)", tables[index], count)
+		counts[table] = count
 	}
-	return tables
+	return counts
 }
 
 func (context *DatabaseContext) FetchTable(selectedTable string) ([]Column, []Row, error) { // context.FetchLimitOffset += context.FetchLimit
 	opts := query.Statement{Limit: context.FetchLimit, Offset: context.FetchLimitOffset}
 	dbRows, err := context.DB.Query(context.Driver.SelectAllQuery(selectedTable, opts))
+	context.onQueryExecuted(context.Driver.SelectAllQuery(selectedTable, opts), err)
 	if err != nil {
 		logger.Warn(err)
 		return nil, nil, err

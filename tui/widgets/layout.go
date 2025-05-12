@@ -1,8 +1,6 @@
-package views
+package widgets
 
 import (
-	"encoding/json"
-
 	"github.com/jesseduffield/gocui"
 )
 
@@ -20,7 +18,7 @@ var DefaultBackgroundColor = gocui.ColorDefault
 var InvForegroundColor = gocui.ColorDefault | gocui.AttrReverse
 var InvBackgroundColor = gocui.ColorDefault | gocui.AttrReverse
 
-func SidePanel(termSizeX, termSizeY int) (string, int, int, int, int, byte) {
+func SidePanelLayout(termSizeX, termSizeY int) (string, int, int, int, int, byte) {
 	termSizeX -= edgeOffset
 	termSizeX /= sidePanelWidthRatio
 	termSizeY -= commandBarHeight + helpBarHeight
@@ -29,15 +27,15 @@ func SidePanel(termSizeX, termSizeY int) (string, int, int, int, int, byte) {
 	return SidePanelViewName, x0, y0, x1, y1, 0 //gocui.RIGHT
 }
 
-func DataView(termSizeX, termSizeY int) (string, int, int, int, int, byte) {
+func DataViewLayout(termSizeX, termSizeY int) (string, int, int, int, int, byte) {
 	termSizeX -= edgeOffset
 	termSizeY -= commandBarHeight + helpBarHeight
 	x0, x1 := termSizeX/sidePanelWidthRatio, termSizeX
 	y0, y1 := -1, termSizeY
-	return DataTableViewName, x0, y0, x1, y1, 0
+	return DataAreaViewName, x0, y0, x1, y1, 0
 }
 
-func CommandBar(termSizeX, termSizeY, extraHeight int) (string, int, int, int, int, byte) {
+func CommandBarLayout(termSizeX, termSizeY, extraHeight int) (string, int, int, int, int, byte) {
 	termSizeX -= edgeOffset
 	termSizeY -= commandBarHeight
 	x0, x1 := 0, termSizeX
@@ -45,7 +43,7 @@ func CommandBar(termSizeX, termSizeY, extraHeight int) (string, int, int, int, i
 	return CommandBarViewName, x0, y0 - extraHeight, x1, y1, 0
 }
 
-func HelpBar(termSizeX, termSizeY int) (string, int, int, int, int, byte) {
+func HelpBarLayout(termSizeX, termSizeY int) (string, int, int, int, int, byte) {
 	termSizeX -= edgeOffset
 	x0, x1 := 0, termSizeX
 	y0, y1 := termSizeY-helpBarHeight, termSizeY
@@ -75,16 +73,4 @@ func SetSidePanelColors(view *gocui.View) {
 	view.BgColor = DefaultBackgroundColor
 	view.SelFgColor = gocui.AttrReverse
 	view.SelBgColor = gocui.AttrReverse
-}
-
-func PrettifyJson(jsonString string) string {
-	var tmp any
-	if err := json.Unmarshal([]byte(jsonString), &tmp); err != nil {
-		return jsonString
-	}
-	prettyJson, err := json.MarshalIndent(tmp, "", "  ")
-	if err != nil {
-		return jsonString
-	}
-	return string(prettyJson)
 }

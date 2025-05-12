@@ -1,4 +1,4 @@
-package views
+package widgets
 
 import (
 	"fmt"
@@ -55,6 +55,7 @@ func (n *NotificationHandler) NewNotification(level gooldb.NotificationLevel, ar
 		view.Wrap = true
 		view.Frame = true
 		view.Editable = false
+		view.Title = level.String()
 		fmt.Fprint(view, args...)
 		notificationView := &NotificationView{
 			View:  view,

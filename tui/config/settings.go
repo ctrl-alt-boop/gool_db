@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ctrl-alt-boop/gooldb/tui/views"
+	"github.com/ctrl-alt-boop/gooldb/tui/widgets"
 	"github.com/jesseduffield/gocui"
 	"gopkg.in/yaml.v3"
 )
@@ -148,42 +148,42 @@ func GetDefaultKeybindings() *AppConfig {
 		Keybindings: []KeybindingConfig{
 			// Global
 			{Action: "cycle_view", Key: "<tab>", View: ""},
-			{Action: "refresh_view", Key: "<f5>", View: ""},
+			{Action: "refresh_view", Key: "c", View: ""},
 			{Action: "quit", Key: "<ctrl+c>", View: ""},
 			{Action: "commandbar_open", Key: ":", View: ""},
 			{Action: "queryoptions_open", Key: "f", View: ""},
 
 			// SidePanelView
-			{Action: "sidepanel_select", Key: "<enter>", View: views.SidePanelViewName},
-			{Action: "sidepanel_back", Key: "<esc>", View: views.SidePanelViewName},
-			{Action: "sidepanel_up", Key: "<up>", View: views.SidePanelViewName},
-			{Action: "sidepanel_down", Key: "<down>", View: views.SidePanelViewName},
-			{Action: "sidepanel_up_alt", Key: "k", View: views.SidePanelViewName},
-			{Action: "sidepanel_down_alt", Key: "j", View: views.SidePanelViewName},
+			{Action: "sidepanel_select", Key: "<enter>", View: widgets.SidePanelViewName},
+			{Action: "sidepanel_back", Key: "<esc>", View: widgets.SidePanelViewName},
+			{Action: "sidepanel_up", Key: "<up>", View: widgets.SidePanelViewName},
+			{Action: "sidepanel_down", Key: "<down>", View: widgets.SidePanelViewName},
+			{Action: "sidepanel_up_alt", Key: "k", View: widgets.SidePanelViewName},
+			{Action: "sidepanel_down_alt", Key: "j", View: widgets.SidePanelViewName},
 
 			// DataTableView
-			{Action: "dataview_up", Key: "<up>", View: views.DataTableViewName},
-			{Action: "dataview_down", Key: "<down>", View: views.DataTableViewName},
-			{Action: "dataview_left", Key: "<left>", View: views.DataTableViewName},
-			{Action: "dataview_right", Key: "<right>", View: views.DataTableViewName},
-			{Action: "dataview_up_alt", Key: "k", View: views.DataTableViewName},
-			{Action: "dataview_down_alt", Key: "j", View: views.DataTableViewName},
-			{Action: "dataview_left_alt", Key: "h", View: views.DataTableViewName},
-			{Action: "dataview_right_alt", Key: "l", View: views.DataTableViewName},
+			{Action: "dataview_up", Key: "<up>", View: widgets.DataAreaViewName},
+			{Action: "dataview_down", Key: "<down>", View: widgets.DataAreaViewName},
+			{Action: "dataview_left", Key: "<left>", View: widgets.DataAreaViewName},
+			{Action: "dataview_right", Key: "<right>", View: widgets.DataAreaViewName},
+			{Action: "dataview_up_alt", Key: "k", View: widgets.DataAreaViewName},
+			{Action: "dataview_down_alt", Key: "j", View: widgets.DataAreaViewName},
+			{Action: "dataview_left_alt", Key: "h", View: widgets.DataAreaViewName},
+			{Action: "dataview_right_alt", Key: "l", View: widgets.DataAreaViewName},
 
 			// TableCellView (popup)
-			{Action: "tablecell_open", Key: "<enter>", View: views.DataTableViewName},
-			{Action: "tablecell_close", Key: "<esc>", View: views.TableCellViewName},
-			{Action: "tablecell_scroll_up", Key: "<up>", View: views.TableCellViewName},
-			{Action: "tablecell_scroll_down", Key: "<down>", View: views.TableCellViewName},
+			{Action: "tablecell_open", Key: "<enter>", View: widgets.DataAreaViewName},
+			{Action: "tablecell_close", Key: "<esc>", View: widgets.TableCellViewName},
+			{Action: "tablecell_scroll_up", Key: "<up>", View: widgets.TableCellViewName},
+			{Action: "tablecell_scroll_down", Key: "<down>", View: widgets.TableCellViewName},
 
 			// CommandBarView
-			{Action: "commandbar_close", Key: "<esc>", View: views.CommandBarViewName},
-			{Action: "commandbar_enter", Key: "<enter>", View: views.CommandBarViewName},
+			{Action: "commandbar_close", Key: "<esc>", View: widgets.CommandBarViewName},
+			{Action: "commandbar_enter", Key: "<enter>", View: widgets.CommandBarViewName},
 
 			// QueryOptionsView
-			{Action: "queryoptions_close", Key: "<esc>", View: views.QueryOptionsViewName},
-			{Action: "queryoptions_enter", Key: "<enter>", View: views.QueryOptionsViewName},
+			{Action: "queryoptions_close", Key: "<esc>", View: widgets.QueryOptionsViewName},
+			{Action: "queryoptions_enter", Key: "<enter>", View: widgets.QueryOptionsViewName},
 		},
 	}
 }

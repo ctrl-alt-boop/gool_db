@@ -9,7 +9,7 @@ keybindings:
   - action: "cycle_view"
     key: "<tab>"
   - action: "refresh_view"
-    key: "<f5>"
+    key: "c"
   - action: "quit"
     key: "<ctrl+c>"
   - action: "commandbar_open"

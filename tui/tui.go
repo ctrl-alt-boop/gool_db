@@ -6,7 +6,7 @@ import (
 	"github.com/ctrl-alt-boop/gooldb/internal/app/gooldb"
 	"github.com/ctrl-alt-boop/gooldb/pkg/logging"
 	"github.com/ctrl-alt-boop/gooldb/tui/config"
-	"github.com/ctrl-alt-boop/gooldb/tui/views"
+	"github.com/ctrl-alt-boop/gooldb/tui/widgets"
 	"github.com/jesseduffield/gocui"
 )
 
@@ -16,13 +16,13 @@ type Tui struct {
 	*gocui.Gui
 	goolDb *gooldb.GoolDb
 
-	sidePanel    *views.SidePanelView
-	commandBar   *views.CommandBarView
-	dataView     *views.DataTableView
-	queryOptions *views.QueryOptionsView
-	helpFooter   *views.HelpFooterView
+	sidePanel    *widgets.SidePanel
+	commandBar   *widgets.CommandBar
+	dataView     *widgets.DataArea
+	queryOptions *widgets.QueryOptions
+	helpFooter   *widgets.HelpFooter
 
-	notificationHandler *views.NotificationHandler
+	notificationHandler *widgets.NotificationHandler
 	prevView            string
 }
 
@@ -35,29 +35,27 @@ func Create(notifier *Notifier, goolDb *gooldb.GoolDb) *Tui {
 		panic(fmt.Sprintf("Failed to create new gocui.Gui: %v", err))
 	}
 
-	sidePanel := &views.SidePanelView{}
-	commandBar := &views.CommandBarView{
-		GoolDb: goolDb,
-	}
-	dataView := &views.DataTableView{}
-	queryOptions := &views.QueryOptionsView{}
-	helpFooter := &views.HelpFooterView{}
-	notificationHandler := &views.NotificationHandler{}
+	sidePanel := widgets.CreateSidePanel()
+	commandBar := widgets.CreateCommandBar(goolDb)
+	dataArea := widgets.CreateDataArea()
+	queryOptions := &widgets.QueryOptions{}
+	// helpFooter := widgets.CreateHelpFooter()
+	notificationHandler := &widgets.NotificationHandler{}
 
 	goolDb.RegisterEventHandler(gooldb.DriverSet, sidePanel.OnDriverSet)
 	goolDb.RegisterEventHandler(gooldb.DatabaseSet, sidePanel.OnDatabaseSet)
-	goolDb.RegisterEventHandler(gooldb.TableSet, dataView.OnTableSet)
+	goolDb.RegisterEventHandler(gooldb.TableSet, dataArea.OnTableSet)
 
-	g.SetManager(sidePanel, commandBar, dataView, helpFooter)
+	g.SetManager(sidePanel, commandBar, dataArea, widgets.Help)
 
 	tui := &Tui{
 		Gui:                 g,
 		goolDb:              goolDb,
 		sidePanel:           sidePanel,
 		commandBar:          commandBar,
-		dataView:            dataView,
+		dataView:            dataArea,
 		queryOptions:        queryOptions,
-		helpFooter:          helpFooter,
+		helpFooter:          widgets.Help,
 		notificationHandler: notificationHandler,
 		prevView:            "",
 	}
@@ -91,39 +89,11 @@ func Create(notifier *Notifier, goolDb *gooldb.GoolDb) *Tui {
 	return tui
 }
 
-func (tui *Tui) previousView() {
-	if tui.prevView != "" && tui.prevView != views.CommandBarViewName {
-		tui.SetCurrentView(tui.prevView)
-	} else {
-		tui.SetCurrentView(views.SidePanelViewName)
-	}
-}
-
-// SetCurrentView updates the current view and stores the previous one.
-func (tui *Tui) SetCurrentView(name string) *gocui.View {
-	currentViewName := ""
-	if cv := tui.CurrentView(); cv != nil {
-		currentViewName = cv.Name()
-	}
-
-	view, err := tui.Gui.SetCurrentView(name)
-	if err != nil {
-		logger.Errorf("Failed to set current view to '%s': %v", name, err)
-		return view
-	}
-
-	// Only update prevView if the view switch was successful and different
-	if currentViewName != name {
-		tui.prevView = currentViewName
-	}
-	return view
-}
-
 func (tui *Tui) Run() error {
 	defer tui.Gui.Close()
 
 	if err := tui.Gui.MainLoop(); err != nil && err != gocui.ErrQuit {
-		logger.Errorf("Gocui MainLoop error: %v", err)
+		logger.Fatalf("Gocui MainLoop error: %v", err)
 		return err
 	}
 	return nil

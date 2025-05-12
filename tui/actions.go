@@ -1,59 +1,24 @@
 package tui
 
 import (
-	"fmt"
-	"strings"
-
-	"github.com/ctrl-alt-boop/gooldb/tui/views"
+	"github.com/ctrl-alt-boop/gooldb/tui/widgets"
 	"github.com/jesseduffield/gocui"
 )
-
-func MoveCursorUp() func(*gocui.Gui, *gocui.View) error {
-	return func(g *gocui.Gui, currentView *gocui.View) error {
-		if currentView != nil {
-			MoveCursorWithScrolling(currentView, 0, -1)
-		}
-		return nil
-	}
-}
-
-func MoveCursorDown() func(*gocui.Gui, *gocui.View) error {
-	return func(_ *gocui.Gui, currentView *gocui.View) error {
-		if currentView != nil {
-			MoveCursorWithScrolling(currentView, 0, 1)
-		}
-		return nil
-	}
-}
-
-func MoveCursorLeft() func(*gocui.Gui, *gocui.View) error {
-	return func(_ *gocui.Gui, currentView *gocui.View) error {
-		MoveCursorWithScrolling(currentView, -1, 0)
-		return nil
-	}
-}
-
-func MoveCursorRight() func(*gocui.Gui, *gocui.View) error {
-	return func(_ *gocui.Gui, currentView *gocui.View) error {
-		MoveCursorWithScrolling(currentView, 1, 0)
-		return nil
-	}
-}
 
 func (tui *Tui) cycleCurrentView() func(_ *gocui.Gui, _ *gocui.View) error {
 	return func(g *gocui.Gui, currentView *gocui.View) error {
 		var nextViewName string
 
 		switch currentView.Name() {
-		case views.SidePanelViewName:
+		case widgets.SidePanelViewName:
 			if !tui.dataView.IsTableSet() {
 				return nil
 			}
-			nextViewName = views.DataTableViewName
+			nextViewName = widgets.DataAreaViewName
 			tui.sidePanel.SetInactiveColors()
 
-		case views.DataTableViewName:
-			nextViewName = views.SidePanelViewName
+		case widgets.DataAreaViewName:
+			nextViewName = widgets.SidePanelViewName
 			tui.dataView.ClearHighlight()
 			tui.sidePanel.SetActiveColors()
 		}
@@ -62,9 +27,7 @@ func (tui *Tui) cycleCurrentView() func(_ *gocui.Gui, _ *gocui.View) error {
 
 		if newActiveView != nil {
 			g.Cursor = false
-			if nextViewName == views.DataTableViewName {
-				// newActiveView.SetCursor(1, 1) // TODO: Maybe not
-				// newActiveView.SetOrigin(0, 0) // TODO: Maybe not
+			if nextViewName == widgets.DataAreaViewName {
 				tui.dataView.HighlightSelectedCell()
 			}
 		}
@@ -73,54 +36,35 @@ func (tui *Tui) cycleCurrentView() func(_ *gocui.Gui, _ *gocui.View) error {
 	}
 }
 
-func (tui *Tui) onF5Pressed() func(g *gocui.Gui, v *gocui.View) error {
-	return func(_ *gocui.Gui, currentView *gocui.View) error {
-		tablesWithCounts := tui.goolDb.FetchCounts(currentView.BufferLines())
-		tui.Update(func(g *gocui.Gui) error {
-			currentView.Clear()
-			fmt.Fprint(currentView, strings.Join(tablesWithCounts, "\n"))
-			return nil
-		})
-		return nil
+func (tui *Tui) previousView() {
+	if tui.prevView != "" && tui.prevView != widgets.CommandBarViewName {
+		tui.SetCurrentView(tui.prevView)
+	} else {
+		tui.SetCurrentView(widgets.SidePanelViewName)
 	}
 }
 
-func MoveCursorWithScrolling(v *gocui.View, dx, dy int) {
-	cx, cy := v.Cursor()
-	ox, oy := v.Origin()
-	maxX, maxY := v.Size()
-
-	newCx := cx + dx
-	newCy := cy + dy
-
-	newOx := ox
-	newOy := oy
-
-	// Adjust origin for vertical scrolling
-	if newCy < oy {
-		newOy = newCy // Scroll up
-	} else if newCy >= oy+maxY {
-		newOy = newCy - maxY + 1 // Scroll down
+// SetCurrentView updates the current view and stores the previous one.
+func (tui *Tui) SetCurrentView(name string) *gocui.View {
+	currentViewName := ""
+	if cv := tui.CurrentView(); cv != nil {
+		currentViewName = cv.Name()
 	}
 
-	// Adjust origin for horizontal scrolling
-	if newCx < ox {
-		newOx = newCx // Scroll left
-	} else if newCx >= ox+maxX {
-		newOx = newCx - maxX + 1 // Scroll right
+	view, err := tui.Gui.SetCurrentView(name)
+	if err != nil {
+		logger.Fatalf("Failed to set current view to '%s': %v", name, err)
+		return view
 	}
 
-	// Ensure origin doesn't go below zero
-	if newOx < 0 {
-		newOx = 0
+	// Only update prevView if the view switch was successful and different
+	if currentViewName != name {
+		tui.prevView = currentViewName
 	}
-	if newOy < 0 {
-		newOy = 0
+	if name == widgets.SidePanelViewName {
+		tui.helpFooter.SetCurrentView(tui.sidePanel.GetModeString())
+	} else {
+		tui.helpFooter.SetCurrentView(name)
 	}
-
-	v.SetCursor(newCx, newCy)
-	// Apply the new origin if it changed
-	if newOx != ox || newOy != oy {
-		v.SetOrigin(newOx, newOy)
-	}
+	return view
 }

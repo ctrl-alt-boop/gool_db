@@ -8,6 +8,8 @@ const (
 	DatabaseSet EventType = "DatabaseSet"
 	TableSet    EventType = "TableSet"
 
+	Query EventType = "QueryEvent"
+
 	RowSet    EventType = "RowSet"
 	ColumnSet EventType = "ColumnSet"
 )
@@ -33,4 +35,11 @@ type TableSetEvent struct {
 type CellSelectedEvent struct {
 	Selected string
 	Value    string
+}
+
+type QueryEvent struct {
+	Driver   string
+	Database string
+	Table    string
+	Query    string
 }

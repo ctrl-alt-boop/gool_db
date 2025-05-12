@@ -1,6 +1,9 @@
 package query
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 var DefaultQueryLimit = 10
 
@@ -43,6 +46,31 @@ type Statement struct {
 
 	PreProcess  StatementProcessor
 	PostProcess StatementProcessor
+}
+
+func (s *Statement) ColumnsString() string {
+	if len(s.Columns) == 0 {
+		return "*"
+	}
+	return strings.Join(s.Columns, ", ")
+}
+
+func (s *Statement) WhereString() string {
+	whereClause := make([]string, 0)
+	for _, where := range s.Where {
+		whereClause = append(whereClause, fmt.Sprintf("%s %s %v", where.Column, where.Operator, where.Value))
+	}
+	return strings.Join(whereClause, " AND ")
+}
+
+func (s *Statement) OrderByString() string {
+	if s.OrderBy.Column == "" {
+		return ""
+	}
+	if s.OrderBy.Desc {
+		return fmt.Sprintf("ORDER BY %s DESC", s.OrderBy.Column)
+	}
+	return fmt.Sprintf("ORDER BY %s ASC", s.OrderBy.Column)
 }
 
 func (s *Statement) IncrementOffset(amount int) {

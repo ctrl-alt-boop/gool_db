@@ -1,6 +1,7 @@
-package views
+package widgets
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
-const DataTableViewName string = "data"
+const DataAreaViewName string = "data"
 const TableCellViewName string = "data_cell"
 
 const firstRow = 1
@@ -32,7 +33,7 @@ type dataViewState struct {
 	contentWidth int
 }
 
-type DataTableView struct {
+type DataArea struct {
 	view *gocui.View
 	gui  *gocui.Gui
 	// gool  *gooldb.GoolDb
@@ -40,17 +41,31 @@ type DataTableView struct {
 	pagination paginationState
 }
 
-func (d *DataTableView) IsTableSet() bool {
+func CreateDataArea() *DataArea {
+	return &DataArea{
+		state: dataViewState{
+			currentColumnIndex: 0,
+			currentRowIndex:    firstRow,
+		},
+		pagination: paginationState{
+			currentPage:   0,
+			totalItems:    0,
+			pagesPerQuery: 2,
+		},
+	}
+}
+
+func (d *DataArea) IsTableSet() bool {
 	return d.state.table != nil
 }
 
-func (d *DataTableView) CurrentTable() string {
+func (d *DataArea) CurrentTable() string {
 	return d.state.tableName
 }
 
-func (d *DataTableView) Layout(g *gocui.Gui) error {
+func (d *DataArea) Layout(g *gocui.Gui) error {
 	maxX, maxY := g.Size()
-	view, err := g.SetView(DataView(maxX, maxY))
+	view, err := g.SetView(DataViewLayout(maxX, maxY))
 	if err != nil {
 		if !gocui.IsUnknownView(err) {
 			logger.Panic(err)
@@ -59,25 +74,19 @@ func (d *DataTableView) Layout(g *gocui.Gui) error {
 		view.Editable = false
 		d.view = view
 		d.gui = g
-		d.state = dataViewState{}
-		d.pagination = paginationState{
-			currentPage:   0,
-			totalItems:    0,
-			pagesPerQuery: 2,
-		}
 	}
 	d.pagination.itemsPerPage = view.InnerHeight() - firstRow
 	return nil
 }
 
-func (d *DataTableView) OnEnterPressed(gool *gooldb.GoolDb) func(*gocui.Gui, *gocui.View) error {
+func (d *DataArea) OnEnterPressed(gool *gooldb.GoolDb) func(*gocui.Gui, *gocui.View) error {
 	return func(_ *gocui.Gui, currentView *gocui.View) error {
 
 		return nil
 	}
 }
 
-func (d *DataTableView) OnTableSet(eventArgs any, err error) {
+func (d *DataArea) OnTableSet(eventArgs any, err error) {
 	logger.Info("OnTableSet: ", eventArgs, err)
 	if err != nil {
 		return
@@ -95,7 +104,6 @@ func (d *DataTableView) OnTableSet(eventArgs any, err error) {
 
 	d.gui.Update(func(g *gocui.Gui) error {
 		d.view.Clear()
-		// d.view.Title = formatedHeader
 		fmt.Fprint(d.view, formatedHeader)
 
 		d.state.currentColumnIndex = 0
@@ -104,7 +112,6 @@ func (d *DataTableView) OnTableSet(eventArgs any, err error) {
 		logger.Info("header: ", formatedHeader)
 		logger.Info("rows: ", strings.Join(formatedRows, "\n"))
 
-		// fmt.Fprint(d.view, formatedHeader)
 		fmt.Fprint(d.view, strings.Join(formatedRows, "\n"))
 		return nil
 	})
@@ -117,7 +124,7 @@ const (
 	spacedColumnSeparator = " \u2502 "
 )
 
-func (d *DataTableView) HighlightSelectedCell() {
+func (d *DataArea) HighlightSelectedCell() {
 	buf := d.view.Buffer()
 	buf = strings.ReplaceAll(buf, hiStart, "")
 	buf = strings.ReplaceAll(buf, hiEnd, "")
@@ -131,24 +138,23 @@ func (d *DataTableView) HighlightSelectedCell() {
 	data[d.state.currentRowIndex] = highlightedData
 
 	d.gui.Update(func(g *gocui.Gui) error {
-		d.view.Clear()
-		fmt.Fprint(d.view, strings.Join(data, "\n"))
+
+		d.view.SetContent(strings.Join(data, "\n"))
 		return nil
 	})
 }
 
-func (d *DataTableView) ClearHighlight() {
+func (d *DataArea) ClearHighlight() {
 	buf := d.view.Buffer()
 	buf = strings.ReplaceAll(buf, hiStart, "")
 	buf = strings.ReplaceAll(buf, hiEnd, "")
 	d.gui.Update(func(g *gocui.Gui) error {
-		d.view.Clear()
-		fmt.Fprint(d.view, buf)
+		d.view.SetContent(buf)
 		return nil
 	})
 }
 
-func (d *DataTableView) GetSelectedCellData() string {
+func (d *DataArea) GetSelectedCellData() string {
 	row, column := d.state.currentRowIndex-1, d.state.currentColumnIndex
 	data, err := d.state.table.GetRowColumn(row, column)
 	if err != nil {
@@ -161,7 +167,19 @@ func (d *DataTableView) GetSelectedCellData() string {
 	return data
 }
 
-func (d *DataTableView) MoveColumnLeft() func(*gocui.Gui, *gocui.View) error {
+func PrettifyJson(jsonString string) string {
+	var tmp any
+	if err := json.Unmarshal([]byte(jsonString), &tmp); err != nil {
+		return jsonString
+	}
+	prettyJson, err := json.MarshalIndent(tmp, "", "  ")
+	if err != nil {
+		return jsonString
+	}
+	return string(prettyJson)
+}
+
+func (d *DataArea) MoveColumnLeft() func(*gocui.Gui, *gocui.View) error {
 	return func(_ *gocui.Gui, dataTableView *gocui.View) error {
 		if dataTableView == nil || d.state.currentColumnIndex <= 0 {
 			return nil
@@ -192,7 +210,7 @@ func (d *DataTableView) MoveColumnLeft() func(*gocui.Gui, *gocui.View) error {
 	}
 }
 
-func (d *DataTableView) MoveColumnRight() func(*gocui.Gui, *gocui.View) error {
+func (d *DataArea) MoveColumnRight() func(*gocui.Gui, *gocui.View) error {
 	return func(_ *gocui.Gui, dataTableView *gocui.View) error {
 		if dataTableView == nil || d.state.currentColumnIndex >= d.state.table.NumColumns()-1 {
 			return nil
@@ -221,7 +239,7 @@ func (d *DataTableView) MoveColumnRight() func(*gocui.Gui, *gocui.View) error {
 	}
 }
 
-func (d *DataTableView) MoveRowUp() func(*gocui.Gui, *gocui.View) error {
+func (d *DataArea) MoveRowUp() func(*gocui.Gui, *gocui.View) error {
 	return func(_ *gocui.Gui, dataTableView *gocui.View) error {
 		if dataTableView == nil || d.state.currentRowIndex <= firstRow {
 			return nil
@@ -235,7 +253,7 @@ func (d *DataTableView) MoveRowUp() func(*gocui.Gui, *gocui.View) error {
 	}
 }
 
-func (d *DataTableView) MoveRowDown() func(*gocui.Gui, *gocui.View) error {
+func (d *DataArea) MoveRowDown() func(*gocui.Gui, *gocui.View) error {
 	return func(_ *gocui.Gui, dataTableView *gocui.View) error {
 		if dataTableView == nil || d.state.currentRowIndex >= len(d.state.table.Rows()) {
 			return nil
@@ -249,7 +267,7 @@ func (d *DataTableView) MoveRowDown() func(*gocui.Gui, *gocui.View) error {
 	}
 }
 
-func (d *DataTableView) updateColumnWidths() {
+func (d *DataArea) updateColumnWidths() {
 	d.state.columnWidths = make([]int, d.state.table.NumColumns())
 	for i := range d.state.table.Rows() {
 		row := d.state.table.GetRowStrings(i)
@@ -267,7 +285,7 @@ func (d *DataTableView) updateColumnWidths() {
 	}
 }
 
-func (d *DataTableView) getFormatedRow(i int) string {
+func (d *DataArea) getFormatedRow(i int) string {
 	widths := d.state.columnWidths
 	row := d.state.table.GetRowStrings(i)
 	formatedRow := ""
@@ -283,7 +301,7 @@ func (d *DataTableView) getFormatedRow(i int) string {
 	return formatedRow
 }
 
-func (d *DataTableView) getFormatedRows() []string {
+func (d *DataArea) getFormatedRows() []string {
 	formatedRows := make([]string, d.state.table.NumRows())
 	for i := range d.state.table.Rows() {
 		formatedRows[i] = d.getFormatedRow(i)
@@ -294,7 +312,7 @@ func (d *DataTableView) getFormatedRows() []string {
 	return formatedRows
 }
 
-func (d *DataTableView) getFormatedTitle() string {
+func (d *DataArea) getFormatedTitle() string {
 	formatedHeader := ""
 	for columnIndex, name := range d.state.table.ColumnNames() {
 		formatedHeader += "\u2500"
