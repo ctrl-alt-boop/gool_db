@@ -19,6 +19,7 @@ const commandBarPrompt string = "> "
 type CommandBar struct {
 	view   *gocui.View
 	GoolDb *gooldb.GoolDb
+	drawer *Drawer
 
 	prevCommands []string
 
@@ -26,9 +27,10 @@ type CommandBar struct {
 	extraHeight int
 }
 
-func CreateCommandBar(goolDb *gooldb.GoolDb) *CommandBar {
+func CreateCommandBar(drawer *Drawer, goolDb *gooldb.GoolDb) *CommandBar {
 	return &CommandBar{
 		GoolDb:       goolDb,
+		drawer:       drawer,
 		prevCommands: make([]string, 0),
 		prevChar:     ' ',
 		extraHeight:  0,
@@ -44,6 +46,7 @@ func (c *CommandBar) Layout(g *gocui.Gui) error {
 		}
 
 		view.Frame = true
+		view.FrameRunes = RoundedCorners()
 		view.Editable = true
 		view.IgnoreCarriageReturns = true
 		view.Editor = gocui.EditorFunc(c.commandBarEdit)

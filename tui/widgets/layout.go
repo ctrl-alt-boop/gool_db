@@ -55,6 +55,11 @@ func Popup(name string, dimensionsFunc func() (int, int, int, int)) (string, int
 	return name, x0 + modalMargin, y0 + modalMargin, x1 - modalMargin, y1 - modalMargin, 0
 }
 
+// []rune{'─', '│', '┌', '┐', '└', '┘'}
+func RoundedCorners() []rune {
+	return []rune{'─', '│', '╭', '╮', '╰', '╯'}
+}
+
 // func Popup(name string, dataTableX0, dataTableY0, dataTableX1, dataTableY1 int) (string, int, int, int, int, byte) {
 // 	x0, x1 := dataTableX0+modalMargin, dataTableX1-modalMargin
 // 	y0, y1 := dataTableY0+modalMargin, dataTableY1-modalMargin

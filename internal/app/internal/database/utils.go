@@ -15,8 +15,9 @@ func NameToDriver(driver DriverName) DbDriver {
 	case DriverSQLite:
 		return &sql.SQLite3{}
 	default:
-		panic("Driver not implemented")
+		logger.Panic("Driver not implemented: ", driver)
 	}
+	return nil
 }
 
 func Abbr(s string, maxWidth int) string {

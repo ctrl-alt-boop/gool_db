@@ -34,10 +34,11 @@ func Create(notifier *Notifier, goolDb *gooldb.GoolDb) *Tui {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create new gocui.Gui: %v", err))
 	}
+	drawer := widgets.CreateDrawer(g)
 
-	sidePanel := widgets.CreateSidePanel()
-	commandBar := widgets.CreateCommandBar(goolDb)
-	dataArea := widgets.CreateDataArea()
+	sidePanel := widgets.CreateSidePanel(drawer, goolDb)
+	commandBar := widgets.CreateCommandBar(drawer, goolDb)
+	dataArea := widgets.CreateDataArea(drawer)
 	queryOptions := &widgets.QueryOptions{}
 	// helpFooter := widgets.CreateHelpFooter()
 	notificationHandler := &widgets.NotificationHandler{}
@@ -46,7 +47,7 @@ func Create(notifier *Notifier, goolDb *gooldb.GoolDb) *Tui {
 	goolDb.RegisterEventHandler(gooldb.DatabaseSet, sidePanel.OnDatabaseSet)
 	goolDb.RegisterEventHandler(gooldb.TableSet, dataArea.OnTableSet)
 
-	g.SetManager(sidePanel, commandBar, dataArea, widgets.Help)
+	g.SetManager(sidePanel, commandBar, dataArea, widgets.Help, drawer)
 
 	tui := &Tui{
 		Gui:                 g,

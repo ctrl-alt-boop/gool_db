@@ -34,15 +34,17 @@ type dataViewState struct {
 }
 
 type DataArea struct {
-	view *gocui.View
-	gui  *gocui.Gui
-	// gool  *gooldb.GoolDb
+	view   *gocui.View
+	gui    *gocui.Gui
+	drawer *Drawer
+
 	state      dataViewState
 	pagination paginationState
 }
 
-func CreateDataArea() *DataArea {
+func CreateDataArea(drawer *Drawer) *DataArea {
 	return &DataArea{
+		drawer: drawer,
 		state: dataViewState{
 			currentColumnIndex: 0,
 			currentRowIndex:    firstRow,
@@ -87,7 +89,6 @@ func (d *DataArea) OnEnterPressed(gool *gooldb.GoolDb) func(*gocui.Gui, *gocui.V
 }
 
 func (d *DataArea) OnTableSet(eventArgs any, err error) {
-	logger.Info("OnTableSet: ", eventArgs, err)
 	if err != nil {
 		return
 	}
@@ -108,9 +109,6 @@ func (d *DataArea) OnTableSet(eventArgs any, err error) {
 
 		d.state.currentColumnIndex = 0
 		d.state.currentRowIndex = firstRow
-
-		logger.Info("header: ", formatedHeader)
-		logger.Info("rows: ", strings.Join(formatedRows, "\n"))
 
 		fmt.Fprint(d.view, strings.Join(formatedRows, "\n"))
 		return nil
@@ -306,9 +304,6 @@ func (d *DataArea) getFormatedRows() []string {
 	for i := range d.state.table.Rows() {
 		formatedRows[i] = d.getFormatedRow(i)
 	}
-	// logger.Info("len(formatedRows) = ", len(formatedRows))
-	// logger.Info("maxWidths = ", d.state.columnWidths)
-	// logger.Info(formatedRows)
 	return formatedRows
 }
 
@@ -321,7 +316,6 @@ func (d *DataArea) getFormatedTitle() string {
 		if d.state.columnWidths[columnIndex] == 0 {
 			d.state.columnWidths[columnIndex] = len(name) + 2
 		}
-		// logger.Info("column = ", name, ", width = ", d.state.columnWidths[columnIndex]-len(name)+1)
 		formatedHeader += strings.Repeat("\u2500", d.state.columnWidths[columnIndex]-len(name)+1)
 		if columnIndex == len(d.state.table.Columns())-1 {
 			formatedHeader += "\u2510"

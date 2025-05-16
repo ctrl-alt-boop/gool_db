@@ -66,17 +66,19 @@ type sidePanelState struct {
 }
 
 type SidePanel struct {
-	view *gocui.View
-	gui  *gocui.Gui
+	view   *gocui.View
+	gui    *gocui.Gui
+	drawer *Drawer
 
 	state sidePanelState
 }
 
-func CreateSidePanel() *SidePanel {
+func CreateSidePanel(drawer *Drawer, goolDb *gooldb.GoolDb) *SidePanel {
 	return &SidePanel{
+		drawer: drawer,
 		state: sidePanelState{
 			mode:    DriverList,
-			drivers: gooldb.SupportedDrivers,
+			drivers: goolDb.GetDrivers(),
 		},
 	}
 }
@@ -105,6 +107,7 @@ func (s *SidePanel) Layout(g *gocui.Gui) error {
 		}
 
 		view.Frame = true
+		view.FrameRunes = RoundedCorners()
 		view.Editable = false
 		view.Highlight = true
 		view.SelFgColor = gocui.AttrReverse
@@ -117,6 +120,10 @@ func (s *SidePanel) Layout(g *gocui.Gui) error {
 	}
 
 	return nil
+}
+
+func (s *SidePanel) GetTitle() string {
+	return s.view.Title
 }
 
 func (s *SidePanel) ShowNoCounts() {
@@ -203,7 +210,6 @@ func (s *SidePanel) ToggleCounts(fetch func(tables []string) map[string]int) fun
 
 // selected string, databases []string
 func (s *SidePanel) OnDriverSet(eventArgs any, err error) {
-	logger.Info("OnDriverSet: ", eventArgs, err)
 	args, ok := eventArgs.(gooldb.DriverSetEvent)
 	if !ok {
 		logger.Warn(eventArgs, args, ok)
@@ -225,7 +231,6 @@ func (s *SidePanel) OnDriverSet(eventArgs any, err error) {
 
 // selected string, tables []string
 func (s *SidePanel) OnDatabaseSet(eventArgs any, err error) {
-	logger.Info("OnDatabaseSet: ", eventArgs, err)
 	args, ok := eventArgs.(gooldb.DatabaseSetEvent)
 	if !ok {
 		logger.Warn(err)

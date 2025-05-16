@@ -13,7 +13,7 @@ const (
 	_pass string = "valmatics"
 )
 
-var SupportedDrivers []string = []string{
+var supportedDrivers []string = []string{
 	database.DriverPostgreSQL,
 	database.DriverMySql,
 	database.DriverSQLite,
@@ -30,6 +30,10 @@ type GoolDb struct {
 	databaseContext *database.DatabaseContext
 
 	eventHandlers map[EventType][]EventHandler
+}
+
+func (gool *GoolDb) GetDrivers() []string {
+	return supportedDrivers
 }
 
 func Create(log *logging.Logger, notifier Notifier, ip string) *GoolDb {
