@@ -1,4 +1,4 @@
-package tui
+package dribble
 
 import (
 	"github.com/ctrl-alt-boop/gooldb/internal/app/gooldb"

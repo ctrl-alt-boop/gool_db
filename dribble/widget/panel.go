@@ -1,15 +1,21 @@
-package widgets
+package widget
 
 import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ctrl-alt-boop/gooldb/dribble/config"
+	"github.com/ctrl-alt-boop/gooldb/dribble/message"
+	"github.com/ctrl-alt-boop/gooldb/dribble/ui"
+	"github.com/ctrl-alt-boop/gooldb/dribble/util"
 	"github.com/ctrl-alt-boop/gooldb/internal/app/gooldb"
-	"github.com/ctrl-alt-boop/gooldb/tea/data"
-	"github.com/ctrl-alt-boop/gooldb/tea/event"
-	"github.com/ctrl-alt-boop/gooldb/tea/ui"
 )
+
+type PanelSelectMsg struct {
+	CurrentMode PanelMode
+	Selected    string
+}
 
 type PanelMode string
 
@@ -32,13 +38,14 @@ type Panel struct {
 	mode PanelMode
 
 	isLoading bool
+	isFocused bool
 	spinner   spinner.Model
 
 	selectHistory []selection
-	cache         data.Cache
+	cache         util.Cache
 }
 
-func CreateListPanel(gool *gooldb.GoolDb) *Panel {
+func NewPanel(gool *gooldb.GoolDb) *Panel {
 	loadingSpinner := spinner.New()
 	loadingSpinner.Spinner = ui.MovingBlock
 
@@ -48,7 +55,7 @@ func CreateListPanel(gool *gooldb.GoolDb) *Panel {
 		mode:          DriverList,
 		spinner:       loadingSpinner,
 		selectHistory: make([]selection, 0),
-		cache:         data.NewCache(),
+		cache:         util.NewCache(),
 	}
 }
 
@@ -80,7 +87,18 @@ func (p *Panel) OnSelect() tea.Cmd {
 	}
 	p.isLoading = true
 
-	return p.spinner.Tick
+	return tea.Batch(p.Select, p.spinner.Tick)
+}
+
+func (p *Panel) Select() tea.Msg {
+	selection, ok := p.list.SelectedItem().(ui.ListItem)
+	if !ok {
+		return nil
+	}
+	return PanelSelectMsg{
+		CurrentMode: p.mode,
+		Selected:    string(selection),
+	}
 }
 
 func (p *Panel) Init() tea.Cmd {
@@ -90,19 +108,22 @@ func (p *Panel) Init() tea.Cmd {
 }
 
 func (p *Panel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	logger.Infof("Got message: %+v", msg)
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		p.UpdateSize(msg.Width, msg.Height)
+
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, KeyMap.Up):
+		case key.Matches(msg, config.Keys.Up):
 			p.list.CursorUp()
-		case key.Matches(msg, KeyMap.Down):
+		case key.Matches(msg, config.Keys.Down):
 			p.list.CursorDown()
-		case key.Matches(msg, KeyMap.Select):
+		case key.Matches(msg, config.Keys.Select):
 			return p, p.OnSelect()
 		}
-	case event.GoolDbEventMsg:
+
+	case message.GoolDbEventMsg:
 		p.isLoading = false
 		if msg.Err != nil {
 			logger.Error(msg.Err)
@@ -112,14 +133,14 @@ func (p *Panel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case gooldb.DriverSet:
 			args, ok := msg.Args.(gooldb.DriverSetEvent)
 			if ok {
-				p.cache.Add(data.NewCacheable(args.Selected, args.Databases))
+				p.cache.Add(util.NewCacheable(args.Selected, args.Databases))
 				p.list.SetItems(args.Databases)
 				p.SetMode(DatabaseList)
 			}
 		case gooldb.DatabaseSet:
 			args, ok := msg.Args.(gooldb.DatabaseSetEvent)
 			if ok {
-				p.cache.Add(data.NewCacheable(args.Selected, args.Tables))
+				p.cache.Add(util.NewCacheable(args.Selected, args.Tables))
 				p.list.SetItems(args.Tables)
 				p.SetMode(TableList)
 			}
@@ -129,6 +150,7 @@ func (p *Panel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				p.cache.Forward(args.Selected)
 			}
 		}
+
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		p.spinner, cmd = p.spinner.Update(msg)
@@ -153,7 +175,7 @@ func (p *Panel) View() string {
 	panelStyle := lipgloss.NewStyle().
 		Height(p.height).
 		Width(p.width).
-		Border(panelBorder, true, true, true, true).
+		Border(panelBorder, true, false, false, true).
 		Align(lipgloss.Left, lipgloss.Top)
 
 	if p.isLoading {

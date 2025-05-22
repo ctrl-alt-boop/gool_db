@@ -1,31 +1,29 @@
-package widgets
+package widget
 
 import (
-	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ctrl-alt-boop/gooldb/dribble/message"
+	"github.com/ctrl-alt-boop/gooldb/dribble/ui"
 	"github.com/ctrl-alt-boop/gooldb/internal/app/gooldb"
-	"github.com/ctrl-alt-boop/gooldb/tea/event"
-	"github.com/ctrl-alt-boop/gooldb/tea/ui"
 )
 
 type Workspace struct {
 	width, height int
 	goolDb        *gooldb.GoolDb
 
-	table        []list.Model
+	table        *ui.BubblesTable
 	columnWidths []int
 
-	delegate  list.ItemDelegate
 	isLoading bool
 	spinner   spinner.Model
 }
 
-func CreateDataArea(gool *gooldb.GoolDb) *Workspace {
+func NewWorkspace(gool *gooldb.GoolDb) *Workspace {
 	return &Workspace{
 		goolDb:       gool,
-		table:        make([]list.Model, 0),
+		table:        ui.New(),
 		columnWidths: make([]int, 0),
 	}
 }
@@ -35,13 +33,6 @@ func (d *Workspace) Init() tea.Cmd {
 	d.spinner.Spinner = ui.MovingBlock
 	d.isLoading = false
 
-	delegate := list.NewDefaultDelegate()
-	delegate.Styles.NormalTitle.Height(1)
-	delegate.Styles.SelectedTitle.Height(1)
-	delegate.SetSpacing(0)
-	delegate.ShowDescription = false
-	d.delegate = delegate
-
 	return nil
 }
 
@@ -49,17 +40,17 @@ func (d *Workspace) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		d.UpdateSize(msg.Width, msg.Height)
-	case event.GoolDbEventMsg:
+	case message.GoolDbEventMsg:
 		d.isLoading = false
 		if msg.Err != nil {
 			logger.Error(msg.Err)
-			return d, event.NewGoolDbError(msg.Err)
+			return d, message.NewGoolDbError(msg.Err)
 		}
 		switch msg.Type {
 		case gooldb.TableSet:
 			args, ok := msg.Args.(gooldb.TableSetEvent)
 			if ok {
-				d.SetTable(args.Table)
+				return d, d.SetTable(args.Table)
 			}
 		}
 	}
@@ -67,26 +58,21 @@ func (d *Workspace) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return d, nil
 }
 
-func (d *Workspace) SetTable(table *gooldb.DataTable) {
-	column, width := table.GetColumnRows(0)
-	items := make([]list.Item, len(column))
-	for i, item := range column {
-		items[i] = ui.ListItem(item)
+func (d *Workspace) SetTable(table *gooldb.DataTable) tea.Cmd {
+	d.table.SetTable(table)
+	return func() tea.Msg {
+		return message.TableSet(true)
 	}
-	list := list.New(items, d.delegate, width, 0)
-	list.SetShowHelp(false)
-	list.SetShowStatusBar(false)
-	list.SetShowFilter(false)
-	list.SetFilteringEnabled(false)
-	list.SetShowPagination(false)
-	list.SetShowTitle(false)
-	d.table = append(d.table, list)
-	d.columnWidths = append(d.columnWidths, width)
+}
+
+func (d *Workspace) IsTableSet() bool {
+	return d.table.IsTableSet()
 }
 
 func (d *Workspace) UpdateSize(termWidth, termHeight int) {
 	panelWidth := termWidth/PanelWidthRatio - BorderThicknessDouble
 	d.width, d.height = termWidth-panelWidth-BorderThicknessDouble-1, termHeight-5
+	// d.table.SetHeight(d.height)
 }
 
 func (d *Workspace) View() string {
@@ -94,16 +80,22 @@ func (d *Workspace) View() string {
 		Top:         "─",
 		Bottom:      "─",
 		Right:       "│",
+		Left:        "│",
 		TopLeft:     "┬",
 		TopRight:    "┐",
 		BottomLeft:  "┴",
 		BottomRight: "┤",
 	}
 
+	width := d.width
+	if len(d.table.Table.Columns()) > 0 {
+		width = d.table.Table.Width()
+	}
+
 	dataStyle := lipgloss.NewStyle().
-		Width(d.width).
+		Width(width).
 		Height(d.height).
-		Border(dataBorder, true, true, true, false).
+		Border(dataBorder, true, true, false, true).
 		Align(lipgloss.Left, lipgloss.Top)
 
 	if d.isLoading {
@@ -113,14 +105,7 @@ func (d *Workspace) View() string {
 			Render(d.spinner.View())
 	}
 
-	views := make([]string, len(d.table))
-	for i, table := range d.table {
-		table.SetHeight(d.height)
-		table.SetWidth(d.columnWidths[i])
-		views[i] = table.View()
-	}
+	tableView := d.table.View()
 
-	table := lipgloss.JoinHorizontal(lipgloss.Top, views...)
-
-	return dataStyle.Render(table)
+	return dataStyle.Render(tableView)
 }

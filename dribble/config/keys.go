@@ -1,6 +1,23 @@
-package widgets
+package config
 
 import "github.com/charmbracelet/bubbles/key"
+
+const (
+	SymbolArrowUp    = "↑"
+	SymbolArrowDown  = "↓"
+	SymbolArrowLeft  = "←"
+	SymbolArrowRight = "→"
+	SymbolEnter      = "⏎"
+	SymbolBackspace  = "⌫"
+	SymbolSpace      = "␣"
+	SymbolTab        = "⇥"
+	SymbolEscape     = "⎋"
+)
+
+const (
+	ArrowNav = SymbolArrowLeft + SymbolArrowDown + SymbolArrowUp + SymbolArrowRight
+	VimNav   = "hjkl"
+)
 
 const (
 	ArrowUp    = "up"
@@ -9,8 +26,9 @@ const (
 	ArrowRight = "right"
 )
 
-type keyMap struct {
-	Nav key.Binding // Used as combined navigation keys for help
+type KeyMap struct {
+	Nav       key.Binding // Used as combined navigation keys for help
+	CycleView key.Binding
 
 	Up     key.Binding
 	Down   key.Binding
@@ -23,13 +41,32 @@ type keyMap struct {
 	Quit key.Binding
 }
 
-var KeyMap = createKeyMap()
+func (keys KeyMap) ShortHelp() []key.Binding {
+	return []key.Binding{keys.Help, keys.Quit}
+}
 
-func createKeyMap() keyMap {
-	return keyMap{
+func (keys KeyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{keys.Help},
+		{keys.Quit},
+		{keys.CycleView},
+		{keys.Nav},
+		{keys.Select},
+		{keys.Back},
+	}
+}
+
+var Keys = createKeyMap()
+
+func createKeyMap() KeyMap {
+	return KeyMap{
 		Nav: key.NewBinding(
 			key.WithKeys("nil"),
 			key.WithHelp(ArrowNav+"/"+VimNav, "navigate"),
+		),
+		CycleView: key.NewBinding(
+			key.WithKeys("tab"),
+			key.WithHelp(SymbolTab, "cycle view"),
 		),
 		Left: key.NewBinding(
 			key.WithKeys("left", "h"),

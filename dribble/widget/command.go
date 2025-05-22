@@ -1,4 +1,4 @@
-package widgets
+package widget
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
@@ -7,22 +7,22 @@ import (
 	"github.com/ctrl-alt-boop/gooldb/internal/app/gooldb"
 )
 
-type CommandBar struct {
+type CommandLine struct {
 	width, height int
 	goolDb        *gooldb.GoolDb
 }
 
-func CreateCommandBar(gool *gooldb.GoolDb) *CommandBar {
-	return &CommandBar{
+func NewCommandBar(gool *gooldb.GoolDb) *CommandLine {
+	return &CommandLine{
 		goolDb: gool,
 	}
 }
 
-func (c *CommandBar) Init() tea.Cmd {
+func (c *CommandLine) Init() tea.Cmd {
 	return nil
 }
 
-func (c *CommandBar) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (c *CommandLine) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		c.UpdateSize(msg.Width, 1)
@@ -30,20 +30,20 @@ func (c *CommandBar) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return c, nil
 }
 
-func (c *CommandBar) UpdateSize(termWidth, termHeight int) {
+func (c *CommandLine) UpdateSize(termWidth, termHeight int) {
 	c.width, c.height = termWidth-BorderThicknessDouble, termHeight
 }
 
-func (c *CommandBar) View() string {
+func (c *CommandLine) View() string {
 	commandBorder := lipgloss.Border{
 		Bottom:      "─",
+		Top:         "─",
 		Left:        "│",
 		Right:       "│",
 		TopLeft:     "├",
 		TopRight:    "┤",
 		BottomLeft:  "└",
 		BottomRight: "┘",
-		MiddleTop:   "┴",
 	}
 
 	input := huh.NewInput().
@@ -52,7 +52,7 @@ func (c *CommandBar) View() string {
 	inputStyle := lipgloss.NewStyle().
 		Width(c.width).
 		Height(c.height).
-		Align(lipgloss.Left, lipgloss.Bottom).
+		Align(lipgloss.Left, lipgloss.Center).
 		Border(commandBorder, false, true, true, true)
 
 	return inputStyle.Render(input.View())
