@@ -8,11 +8,6 @@ import (
 
 var sqlLogger = logging.NewLogger("sql.log")
 
-const (
-	_user string = "valmatics"
-	_pass string = "valmatics"
-)
-
 var supportedDrivers []string = []string{
 	database.DriverPostgreSQL,
 	database.DriverMySql,
@@ -72,8 +67,8 @@ func (gool *GoolDb) SelectDriver(name database.DriverName) {
 			connection.WithDriver(name),
 			connection.WithIp(gool.ip),
 			connection.WithDb("postgres"),
-			connection.WithUser(_user),
-			connection.WithPass(_pass),
+			connection.WithUser(""),
+			connection.WithPass(""),
 			connection.WithSslMode("disable"),
 		)
 		if err != nil {
