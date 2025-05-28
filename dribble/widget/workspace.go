@@ -4,9 +4,27 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/ctrl-alt-boop/gooldb/dribble/message"
+	"github.com/ctrl-alt-boop/gooldb/dribble/io"
 	"github.com/ctrl-alt-boop/gooldb/dribble/ui"
 	"github.com/ctrl-alt-boop/gooldb/internal/app/gooldb"
+	"github.com/ctrl-alt-boop/gooldb/pkg/data"
+)
+
+var (
+	WorkspaceBorder = lipgloss.Border{
+		Top:         "─",
+		Bottom:      "─",
+		Right:       "│",
+		Left:        "│",
+		TopLeft:     "┬",
+		TopRight:    "┐",
+		BottomLeft:  "┴",
+		BottomRight: "┤",
+	}
+
+	workspaceStyle = lipgloss.NewStyle().
+			Border(WorkspaceBorder, true, true, false, true).
+			Align(lipgloss.Left, lipgloss.Top)
 )
 
 type Workspace struct {
@@ -40,15 +58,11 @@ func (d *Workspace) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		d.UpdateSize(msg.Width, msg.Height)
-	case message.GoolDbEventMsg:
+	case io.GoolDbEventMsg:
 		d.isLoading = false
-		if msg.Err != nil {
-			logger.Error(msg.Err)
-			return d, message.NewGoolDbError(msg.Err)
-		}
 		switch msg.Type {
-		case gooldb.TableSet:
-			args, ok := msg.Args.(gooldb.TableSetEvent)
+		case gooldb.TableFetched:
+			args, ok := msg.Args.(gooldb.TableFetchData)
 			if ok {
 				return d, d.SetTable(args.Table)
 			}
@@ -58,11 +72,9 @@ func (d *Workspace) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return d, nil
 }
 
-func (d *Workspace) SetTable(table *gooldb.DataTable) tea.Cmd {
+func (d *Workspace) SetTable(table data.Table) tea.Cmd {
 	d.table.SetTable(table)
-	return func() tea.Msg {
-		return message.TableSet(true)
-	}
+	return WorkspaceSet
 }
 
 func (d *Workspace) IsTableSet() bool {
@@ -70,42 +82,65 @@ func (d *Workspace) IsTableSet() bool {
 }
 
 func (d *Workspace) UpdateSize(termWidth, termHeight int) {
-	panelWidth := termWidth/PanelWidthRatio - BorderThicknessDouble
-	d.width, d.height = termWidth-panelWidth-BorderThicknessDouble-1, termHeight-5
+	panelWidth := termWidth/ui.PanelWidthRatio - ui.BorderThicknessDouble
+	d.width, d.height = termWidth-panelWidth-ui.BorderThicknessDouble-1, termHeight-5
 	// d.table.SetHeight(d.height)
 }
 
-func (d *Workspace) View() string {
-	dataBorder := lipgloss.Border{
-		Top:         "─",
-		Bottom:      "─",
-		Right:       "│",
-		Left:        "│",
-		TopLeft:     "┬",
-		TopRight:    "┐",
-		BottomLeft:  "┴",
-		BottomRight: "┤",
-	}
-
+func (d *Workspace) Style() lipgloss.Style {
 	width := d.width
 	if len(d.table.Table.Columns()) > 0 {
 		width = d.table.Table.Width()
 	}
+	return workspaceStyle.Width(width).Height(d.height)
+}
 
-	dataStyle := lipgloss.NewStyle().
-		Width(width).
-		Height(d.height).
-		Border(dataBorder, true, true, false, true).
-		Align(lipgloss.Left, lipgloss.Top)
+func (d *Workspace) View() string {
+	// dataBorder := lipgloss.Border{
+	// 	Top:         "─",
+	// 	Bottom:      "─",
+	// 	Right:       "│",
+	// 	Left:        "│",
+	// 	TopLeft:     "┬",
+	// 	TopRight:    "┐",
+	// 	BottomLeft:  "┴",
+	// 	BottomRight: "┤",
+	// }
+
+	// width := d.width
+	// if len(d.table.Table.Columns()) > 0 {
+	// 	width = d.table.Table.Width()
+	// }
+
+	// workspaceStyle := lipgloss.NewStyle().
+	// 	Width(width).
+	// 	Height(d.height).
+	// 	Border(dataBorder, true, true, false, true).
+	// 	Align(lipgloss.Left, lipgloss.Top)
 
 	if d.isLoading {
-		return dataStyle.
-			AlignHorizontal(lipgloss.Center).
-			AlignVertical(lipgloss.Center).
-			Render(d.spinner.View())
+		lipgloss.Place(
+			d.width,
+			d.height,
+			lipgloss.Center,
+			lipgloss.Center,
+			d.spinner.View(),
+		)
+
+		// return workspaceStyle.
+		// 	AlignHorizontal(lipgloss.Center).
+		// 	AlignVertical(lipgloss.Center).
+		// 	Render(d.spinner.View())
 	}
 
-	tableView := d.table.View()
+	return lipgloss.Place(
+		d.width,
+		d.height,
+		lipgloss.Left,
+		lipgloss.Top,
+		d.table.View(),
+	)
+	// tableView := d.table.View()
 
-	return dataStyle.Render(tableView)
+	// return workspaceStyle.Render(tableView)
 }

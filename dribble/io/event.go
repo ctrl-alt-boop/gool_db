@@ -1,7 +1,8 @@
-package message
+package io
 
 import (
 	"github.com/ctrl-alt-boop/gooldb/internal/app/gooldb"
+	"github.com/ctrl-alt-boop/gooldb/pkg/connection"
 )
 
 type (
@@ -10,5 +11,8 @@ type (
 		Args any
 		Err  error
 	}
-	TableSet bool
+
+	ConnectMsg struct {
+		Settings *connection.Settings
+	}
 )

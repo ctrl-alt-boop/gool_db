@@ -5,7 +5,7 @@ import (
 	"plugin"
 	"strings"
 
-	"github.com/ctrl-alt-boop/gooldb/internal/app/internal/database/connection"
+	"github.com/ctrl-alt-boop/gooldb/pkg/connection"
 	"github.com/ctrl-alt-boop/gooldb/pkg/query"
 	"github.com/google/uuid"
 )
@@ -18,6 +18,30 @@ const (
 )
 
 type Postgres struct{}
+
+func CreatePostgresDriver() (*Postgres, error) {
+	driver := &Postgres{}
+	err := driver.Load()
+	if err != nil {
+		return nil, err
+	}
+	return driver, nil
+}
+
+// ResolveType implements database.DbDriver.
+func (d *Postgres) ResolveType(dbType string, value []byte) (any, error) {
+	switch dbType {
+	case "UUID":
+		return uuid.ParseBytes(value)
+	default:
+		return string(value), nil
+	}
+}
+
+// IsFile implements database.DbDriver.
+func (d *Postgres) IsFile() bool {
+	return false
+}
 
 // SupportsJsonResult implements database.DbDriver.
 func (d *Postgres) SupportsJsonResult() bool {
@@ -33,13 +57,15 @@ func (d *Postgres) ConnectionString(settings *connection.Settings) string {
 	connString += fmt.Sprintf("port=%d ", settings.Port)
 	connString += fmt.Sprintf("user=%s ", settings.Username)
 	connString += fmt.Sprintf("password=%s ", settings.Password)
-	if settings.DbName != "" {
-		connString += fmt.Sprintf("dbname=%s ", settings.DbName)
+	if settings.DbName == "" {
+		settings.DbName = "postgres"
 	}
-	if settings.SslMode == "" {
-		settings.SslMode = "disable"
+	connString += fmt.Sprintf("dbname=%s ", settings.DbName)
+	sslmode, ok := settings.AdditionalSettings["sslmode"]
+	if !ok {
+		sslmode = "disable"
 	}
-	connString += fmt.Sprintf("sslmode=%s ", settings.SslMode)
+	connString += fmt.Sprintf("sslmode=%s ", sslmode)
 
 	return connString
 }
@@ -76,15 +102,6 @@ func (d *Postgres) CountQuery(table string) string {
 func (d *Postgres) SelectAllQuery(table string, opts query.Statement) string {
 	queryOptsString := buildQueryOptions(opts)
 	return fmt.Sprintf("SELECT * FROM %s%s", table, queryOptsString)
-}
-
-func (d *Postgres) ResolveDatabaseType(dbType string, value []byte) (any, error) {
-	switch dbType {
-	case "UUID":
-		return uuid.ParseBytes(value)
-	default:
-		return string(value), nil
-	}
 }
 
 func (d *Postgres) TablePropertiesQuery(table string) string {

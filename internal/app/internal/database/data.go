@@ -3,39 +3,30 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"reflect"
 	"time"
+
+	"github.com/ctrl-alt-boop/gooldb/pkg/data"
 )
 
-type Column struct {
-	Name     string
-	ScanType reflect.Type
-	DbType   string
-}
-
-type Row struct {
-	Values []any
-}
-
-func ParseRows(driver DbDriver, dbRows *sql.Rows) ([]Column, []Row, error) {
+func ParseRows(driver DbDriver, dbRows *sql.Rows) ([]data.Column, []data.Row, error) {
 	dbColumns, err := dbRows.ColumnTypes()
 	if err != nil {
 		logger.Warn(err)
 		return nil, nil, err
 	}
-	columns := make([]Column, len(dbColumns))
+	columns := make([]data.Column, len(dbColumns))
 	for i := range dbColumns {
-		columns[i] = Column{
+		columns[i] = data.Column{
 			Name:     dbColumns[i].Name(),
 			ScanType: dbColumns[i].ScanType(),
 			DbType:   dbColumns[i].DatabaseTypeName(),
 		}
 	}
 
-	rows := make([]Row, 0)
+	rows := make([]data.Row, 0)
 	for dbRows.Next() {
-		row := Row{
-			make([]any, len(dbColumns)),
+		row := data.Row{
+			Values: make([]any, len(dbColumns)),
 		}
 		scanArr := make([]any, len(dbColumns))
 		for i := range row.Values {
@@ -61,15 +52,14 @@ func ParseRows(driver DbDriver, dbRows *sql.Rows) ([]Column, []Row, error) {
 	return columns, rows, nil
 }
 
-func ResolveTypes(driver DbDriver, rowValue any, column Column) (any, error) {
+func ResolveTypes(resolver data.Resolver, rowValue any, column data.Column) (any, error) {
 	switch value := rowValue.(type) {
 	case string, int, int32, int64, float32, float64, uint, bool:
 		return value, nil
 	case time.Time:
 		return fmt.Sprint(value.Format("2006-01-02 15:04:05.000000-07")), nil
 	case []byte:
-		resolved, err := driver.ResolveDatabaseType(column.DbType, value)
-		//logger.Info("resolving type", driver, column, string(value))
+		resolved, err := resolver.ResolveType(column.DbType, value)
 		if err != nil {
 			return "", err
 		} else {

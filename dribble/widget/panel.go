@@ -6,9 +6,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ctrl-alt-boop/gooldb/dribble/config"
-	"github.com/ctrl-alt-boop/gooldb/dribble/message"
+	"github.com/ctrl-alt-boop/gooldb/dribble/io"
 	"github.com/ctrl-alt-boop/gooldb/dribble/ui"
-	"github.com/ctrl-alt-boop/gooldb/dribble/util"
 	"github.com/ctrl-alt-boop/gooldb/internal/app/gooldb"
 )
 
@@ -20,7 +19,7 @@ type PanelSelectMsg struct {
 type PanelMode string
 
 const (
-	DriverList   PanelMode = "driverList"
+	ServerList   PanelMode = "serverList"
 	DatabaseList PanelMode = "databaseList"
 	TableList    PanelMode = "tableList"
 )
@@ -38,29 +37,25 @@ type Panel struct {
 	mode PanelMode
 
 	isLoading bool
-	isFocused bool
-	spinner   spinner.Model
+
+	spinner spinner.Model
 
 	selectHistory []selection
-	cache         util.Cache
 }
 
 func NewPanel(gool *gooldb.GoolDb) *Panel {
-	loadingSpinner := spinner.New()
-	loadingSpinner.Spinner = ui.MovingBlock
 
 	return &Panel{
 		list:          ui.NewList(),
 		goolDb:        gool,
-		mode:          DriverList,
-		spinner:       loadingSpinner,
+		mode:          ServerList,
+		spinner:       spinner.New(spinner.WithSpinner(ui.MovingBlock)),
 		selectHistory: make([]selection, 0),
-		cache:         util.NewCache(),
 	}
 }
 
 func (p *Panel) UpdateSize(termWidth, termHeight int) {
-	p.width, p.height = termWidth/PanelWidthRatio-BorderThicknessDouble, termHeight-5
+	p.width, p.height = termWidth/ui.PanelWidthRatio-ui.BorderThicknessDouble, termHeight-5
 	p.list.SetSize(p.width, p.height)
 }
 
@@ -73,21 +68,45 @@ func (p *Panel) GetMode() PanelMode {
 }
 
 func (p *Panel) OnSelect() tea.Cmd {
+	var cmd tea.Cmd
+	switch p.mode {
+	case ServerList:
+		selection, ok := p.list.SelectedItem().(ui.ConnectionItem)
+		if ok {
+			logger.Infof("Selected: %+v", selection)
+			cmd = func() tea.Msg {
+				return SelectServerMsg(string(selection.Name))
+			}
+		}
+	case DatabaseList:
+		selection, ok := p.list.SelectedItem().(ui.ListItem)
+		if ok {
+			p.isLoading = true
+			cmd = func() tea.Msg {
+				return SelectDatabaseMsg(string(selection))
+			}
+		}
+
+	case TableList:
+		selection, ok := p.list.SelectedItem().(ui.ListItem)
+		if ok {
+			p.isLoading = true
+			cmd = func() tea.Msg {
+				return SelectTableMsg(string(selection))
+			}
+		}
+
+	}
+
+	return tea.Batch(cmd, p.spinner.Tick)
+}
+
+func (p *Panel) GetSelected() string {
 	selection, ok := p.list.SelectedItem().(ui.ListItem)
 	if !ok {
-		return nil
+		return ""
 	}
-	switch p.mode {
-	case DriverList:
-		p.goolDb.SelectDriver(string(selection))
-	case DatabaseList:
-		p.goolDb.SelectDatabase(string(selection))
-	case TableList:
-		p.goolDb.SelectTable(string(selection))
-	}
-	p.isLoading = true
-
-	return tea.Batch(p.Select, p.spinner.Tick)
+	return string(selection)
 }
 
 func (p *Panel) Select() tea.Msg {
@@ -102,9 +121,21 @@ func (p *Panel) Select() tea.Msg {
 }
 
 func (p *Panel) Init() tea.Cmd {
-	driverList := p.goolDb.GetDrivers()
-	p.list.SetItems(driverList)
-	return nil
+	var connectionItems []ui.ConnectionItem
+	for name, settings := range config.SavedConfigs {
+		connectionItems = append(connectionItems, ui.ConnectionItem{
+			Name:     name,
+			Settings: settings,
+		})
+	}
+	for name, settings := range p.goolDb.GetDriverDefaults() {
+		connectionItems = append(connectionItems, ui.ConnectionItem{
+			Name:     name,
+			Settings: settings,
+		})
+	}
+	p.list.SetConnectionItems(connectionItems)
+	return nil // should maybe do this in AppModel with a Cmd
 }
 
 func (p *Panel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -123,31 +154,26 @@ func (p *Panel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return p, p.OnSelect()
 		}
 
-	case message.GoolDbEventMsg:
+	case io.GoolDbEventMsg:
+		logger.Infof("Got GoolDbEventMsg: %+v", msg)
 		p.isLoading = false
+		p.spinner = spinner.New(spinner.WithSpinner(ui.MovingBlock))
 		if msg.Err != nil {
 			logger.Error(msg.Err)
 			return p, nil
 		}
 		switch msg.Type {
-		case gooldb.DriverSet:
-			args, ok := msg.Args.(gooldb.DriverSetEvent)
+		case gooldb.DatabaseListFetched:
+			args, ok := msg.Args.(gooldb.DatabaseListFetchData)
 			if ok {
-				p.cache.Add(util.NewCacheable(args.Selected, args.Databases))
-				p.list.SetItems(args.Databases)
+				p.list.SetStringItems(args.Databases)
 				p.SetMode(DatabaseList)
 			}
-		case gooldb.DatabaseSet:
-			args, ok := msg.Args.(gooldb.DatabaseSetEvent)
+		case gooldb.DBTableListFetched:
+			args, ok := msg.Args.(gooldb.DBTableListFetchData)
 			if ok {
-				p.cache.Add(util.NewCacheable(args.Selected, args.Tables))
-				p.list.SetItems(args.Tables)
+				p.list.SetStringItems(args.Tables)
 				p.SetMode(TableList)
-			}
-		case gooldb.TableSet:
-			args, ok := msg.Args.(gooldb.TableSetEvent)
-			if ok {
-				p.cache.Forward(args.Selected)
 			}
 		}
 

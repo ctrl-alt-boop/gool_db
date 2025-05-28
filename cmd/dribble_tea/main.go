@@ -19,10 +19,8 @@ func main() {
 	logger := logging.NewLogger("app.log")
 	defer logger.Close()
 
-	notifier := dribble.NewNotifier()
-
 	logger.Info("GoolDb Create")
-	gool := gooldb.Create(logger, notifier, ip)
+	gool := gooldb.New(logger, ip)
 
 	dribble := dribble.NewModel(gool)
 	p := tea.NewProgram(dribble, tea.WithAltScreen())

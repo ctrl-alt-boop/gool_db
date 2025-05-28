@@ -3,7 +3,7 @@ package ui
 import (
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/ctrl-alt-boop/gooldb/dribble/util"
-	"github.com/ctrl-alt-boop/gooldb/internal/app/gooldb"
+	"github.com/ctrl-alt-boop/gooldb/pkg/data"
 )
 
 const defaultCellWidth = 36 // Guid length, including the '-'s
@@ -24,7 +24,7 @@ func New() *BubblesTable {
 	}
 }
 
-func (t *BubblesTable) SetTable(dataTable *gooldb.DataTable) {
+func (t *BubblesTable) SetTable(dataTable data.Table) {
 	newTable := table.New()
 	tableColumns, widths := t.getColumnsAsTableColumns(dataTable)
 	newTable.SetColumns(tableColumns)
@@ -43,7 +43,7 @@ func (t *BubblesTable) IsTableSet() bool {
 	return len(t.Table.Columns()) > 0
 }
 
-func (t *BubblesTable) getColumnsAsTableColumns(dataTable *gooldb.DataTable) ([]table.Column, []int) {
+func (t *BubblesTable) getColumnsAsTableColumns(dataTable data.Table) ([]table.Column, []int) {
 	columnNames := dataTable.ColumnNames()
 	columnWidths := t.GetColumnWidths(dataTable)
 	columns := util.Zip(columnNames, columnWidths)
@@ -54,7 +54,7 @@ func (t *BubblesTable) getColumnsAsTableColumns(dataTable *gooldb.DataTable) ([]
 	return tableColumns, columnWidths
 }
 
-func (t *BubblesTable) getRowsAsTableRows(dataTable *gooldb.DataTable) []table.Row {
+func (t *BubblesTable) getRowsAsTableRows(dataTable data.Table) []table.Row {
 	var tableRows []table.Row
 	for i := range dataTable.Rows() {
 		row := dataTable.GetRowStrings(i)
@@ -63,7 +63,7 @@ func (t *BubblesTable) getRowsAsTableRows(dataTable *gooldb.DataTable) []table.R
 	return tableRows
 }
 
-func (t *BubblesTable) GetColumnWidths(dataTable *gooldb.DataTable) []int {
+func (t *BubblesTable) GetColumnWidths(dataTable data.Table) []int {
 	columnWidths := make([]int, dataTable.NumColumns())
 	for i := range dataTable.Rows() {
 		row := dataTable.GetRowStrings(i)

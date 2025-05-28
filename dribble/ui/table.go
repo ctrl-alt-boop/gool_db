@@ -3,7 +3,7 @@ package ui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/ctrl-alt-boop/gooldb/internal/app/gooldb"
+	"github.com/ctrl-alt-boop/gooldb/pkg/data"
 	"github.com/ctrl-alt-boop/gooldb/pkg/logging"
 )
 
@@ -26,7 +26,7 @@ func NewTable() *Table {
 	return &Table{}
 }
 
-func (t *Table) SetTable(table *gooldb.DataTable) {
+func (t *Table) SetTable(table *data.Table) {
 	lists := make([]*List, table.NumColumns())
 	for i := range lists {
 		lists[i] = NewList()
@@ -43,7 +43,7 @@ func (t *Table) SetTable(table *gooldb.DataTable) {
 			PaddingRight(width - len(name)).
 			BorderStyle(lipgloss.NormalBorder()).
 			BorderRight(true)
-		lists[i].SetItems(column)
+		lists[i].SetStringItems(column)
 		lists[i].Model.SetShowTitle(true)
 		lists[i].Title = name
 	}

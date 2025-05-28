@@ -5,21 +5,13 @@ import (
 )
 
 func (m AppModel) View() string {
-
 	panelView := m.panel.View()
-	commandBarView := m.command.View()
+	promptBarView := m.prompt.View()
 	workspaceView := m.workspace.View()
 	helpFooterView := m.help.View()
-	popupView := m.popupHandler.View()
-
-	mainView := lipgloss.JoinHorizontal(
-		lipgloss.Bottom,
-		panelView,
-		workspaceView,
-	)
 
 	panelViewWidth := lipgloss.Width(panelView)
-	commandBarViewWidth := lipgloss.Width(commandBarView)
+	promptBarViewWidth := lipgloss.Width(promptBarView)
 
 	panelBorder := lipgloss.PlaceHorizontal(
 		panelViewWidth-1,
@@ -27,7 +19,7 @@ func (m AppModel) View() string {
 		"─", lipgloss.WithWhitespaceChars("─"))
 
 	workspaceBorder := lipgloss.PlaceHorizontal(
-		commandBarViewWidth-panelViewWidth-2,
+		promptBarViewWidth-panelViewWidth-2,
 		lipgloss.Left,
 		"─", lipgloss.WithWhitespaceChars("─"))
 
@@ -45,18 +37,31 @@ func (m AppModel) View() string {
 		rightSeparatorCorner,
 	)
 
+	workspaceStyle := m.workspace.Style()
+
+	popupView := m.popupHandler.View()
+	if popupView != "" {
+		workspaceView = popupView
+		workspaceStyle = workspaceStyle.Align(lipgloss.Center, lipgloss.Center)
+		// return lipgloss.Place(m.Width, m.Height,
+		// 	lipgloss.Center, lipgloss.Center,
+		// 	popupView,
+		// 	lipgloss.WithWhitespaceChars(" "), lipgloss.WithWhitespaceBackground(lipgloss.Color("123")))
+	} else {
+		workspaceStyle = workspaceStyle.Align(lipgloss.Left, lipgloss.Top)
+	}
+
 	render := lipgloss.JoinVertical(
 		lipgloss.Top,
-		mainView,
+		lipgloss.JoinHorizontal(
+			lipgloss.Bottom,
+			panelView,
+			workspaceStyle.Render(workspaceView),
+		),
 		separator,
-		commandBarView,
+		promptBarView,
 		helpFooterView,
 	)
 
-	if popupView != "" {
-		render = lipgloss.Place(lipgloss.Width(popupView), lipgloss.Height(popupView),
-			lipgloss.Center, lipgloss.Center, popupView)
-	}
-
-	return render
+	return lipgloss.Place(m.Width, m.Height, lipgloss.Center, lipgloss.Center, render)
 }

@@ -2,9 +2,9 @@ package dribble
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/ctrl-alt-boop/gooldb/dribble/message"
+	"github.com/ctrl-alt-boop/gooldb/dribble/io"
 	"github.com/ctrl-alt-boop/gooldb/dribble/widget"
-	"github.com/ctrl-alt-boop/gooldb/dribble/widget/popups"
+	"github.com/ctrl-alt-boop/gooldb/dribble/widget/popup"
 	"github.com/ctrl-alt-boop/gooldb/internal/app/gooldb"
 	"github.com/ctrl-alt-boop/gooldb/pkg/logging"
 )
@@ -12,13 +12,14 @@ import (
 var logger = logging.NewLogger("tea.log")
 
 type AppModel struct {
-	gooldb *gooldb.GoolDb
+	gooldb        *gooldb.GoolDb
+	Width, Height int
 
 	panel        *widget.Panel
-	command      *widget.CommandLine
+	prompt       *widget.Prompt
 	workspace    *widget.Workspace
 	help         *widget.Help
-	popupHandler *popups.PopupHandler
+	popupHandler *popup.PopupHandler
 
 	inFocus widget.Kind
 
@@ -29,19 +30,24 @@ func NewModel(gool *gooldb.GoolDb) AppModel {
 	return AppModel{
 		gooldb:       gool,
 		panel:        widget.NewPanel(gool),
-		command:      widget.NewCommandBar(gool),
+		prompt:       widget.NewPromptBar(gool),
 		workspace:    widget.NewWorkspace(gool),
 		help:         widget.NewHelp(),
-		popupHandler: popups.NewHandler(gool),
+		popupHandler: popup.NewHandler(gool),
 	}
 }
 
 func (m AppModel) SetProgramSend(send func(msg tea.Msg)) {
 	m.programSend = send
 
-	m.gooldb.RegisterEventHandler(gooldb.DriverSet, m.onEventFunc(gooldb.DriverSet))
-	m.gooldb.RegisterEventHandler(gooldb.DatabaseSet, m.onEventFunc(gooldb.DatabaseSet))
-	m.gooldb.RegisterEventHandler(gooldb.TableSet, m.onEventFunc(gooldb.TableSet))
+	m.gooldb.OnEvent(func(eventType gooldb.EventType, args any, err error) {
+		event := io.GoolDbEventMsg{
+			Type: eventType,
+			Args: args,
+			Err:  err,
+		}
+		m.programSend(event)
+	})
 }
 
 func (m AppModel) Init() tea.Cmd {
@@ -49,7 +55,7 @@ func (m AppModel) Init() tea.Cmd {
 	var cmds []tea.Cmd
 	cmd = m.panel.Init()
 	cmds = append(cmds, cmd)
-	cmd = m.command.Init()
+	cmd = m.prompt.Init()
 	cmds = append(cmds, cmd)
 	cmd = m.workspace.Init()
 	cmds = append(cmds, cmd)
@@ -63,13 +69,13 @@ func (m AppModel) Init() tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-func (m AppModel) onEventFunc(eventType gooldb.EventType) func(a any, err error) {
-	return func(a any, err error) {
-		event := message.GoolDbEventMsg{
-			Type: eventType,
-			Args: a,
-			Err:  err,
-		}
-		m.programSend(event)
-	}
-}
+// func (m AppModel) onEventFunc(eventType gooldb.EventType) func(a any, err error) {
+// 	return func(a any, err error) {
+// 		event := io.GoolDbEventMsg{
+// 			Type: eventType,
+// 			Args: a,
+// 			Err:  err,
+// 		}
+// 		m.programSend(event)
+// 	}
+// }

@@ -1,6 +1,9 @@
 package config
 
-import "github.com/charmbracelet/bubbles/key"
+import (
+	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/huh"
+)
 
 const (
 	SymbolArrowUp    = "↑"
@@ -89,8 +92,8 @@ func createKeyMap() KeyMap {
 			key.WithHelp(SymbolEnter, "select"),
 		),
 		Back: key.NewBinding(
-			key.WithKeys("esc", "backspace"),
-			key.WithHelp(SymbolEscape+"/"+SymbolBackspace, "back"),
+			key.WithKeys("esc"),
+			key.WithHelp(SymbolEscape, "back"),
 		),
 		Quit: key.NewBinding(
 			key.WithKeys("q", "ctrl+c"),
@@ -101,4 +104,13 @@ func createKeyMap() KeyMap {
 			key.WithHelp("?", "toggle help"),
 		),
 	}
+}
+
+var LoginKeyMap = &huh.KeyMap{
+	Input: huh.InputKeyMap{
+		AcceptSuggestion: key.NewBinding(key.WithKeys("ctrl+e"), key.WithHelp("ctrl+e", "complete")),
+		Prev:             key.NewBinding(key.WithKeys("shift+tab"), key.WithHelp("shift+tab", "back")),
+		Next:             key.NewBinding(key.WithKeys("enter", "tab"), key.WithHelp("enter", "next")),
+		Submit:           key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "submit")),
+	},
 }

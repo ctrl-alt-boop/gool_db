@@ -2,23 +2,7 @@ package database
 
 import (
 	"fmt"
-
-	"github.com/ctrl-alt-boop/gooldb/internal/app/internal/database/sql"
 )
-
-func NameToDriver(driver DriverName) DbDriver {
-	switch driver {
-	case DriverMySql:
-		return &sql.MySql{}
-	case DriverPostgreSQL:
-		return &sql.Postgres{}
-	case DriverSQLite:
-		return &sql.SQLite3{}
-	default:
-		logger.Panic("Driver not implemented: ", driver)
-	}
-	return nil
-}
 
 func Abbr(s string, maxWidth int) string {
 	n := (maxWidth / 2)

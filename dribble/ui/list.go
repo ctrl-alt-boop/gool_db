@@ -48,10 +48,19 @@ func NewList() *List {
 	}
 }
 
-func (l *List) SetItems(items []string) {
+func (l *List) SetStringItems(items []string) {
 	listItems := make([]list.Item, len(items))
 	for i, item := range items {
 		listItems[i] = ListItem(item)
+	}
+	l.Model.ResetSelected()
+	l.Model.SetItems(listItems)
+}
+
+func (l *List) SetConnectionItems(items []ConnectionItem) {
+	listItems := make([]list.Item, len(items))
+	for i, item := range items {
+		listItems[i] = item
 	}
 	l.Model.ResetSelected()
 	l.Model.SetItems(listItems)

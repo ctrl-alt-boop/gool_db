@@ -1,45 +1,61 @@
-package gooldb
+package data
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
-	"github.com/ctrl-alt-boop/gooldb/internal/app/internal/database"
 	shared "github.com/ctrl-alt-boop/gooldb/pkg"
 )
 
-type DataTable struct {
-	columns []database.Column
-	rows    []database.Row
+type (
+	Resolver interface {
+		ResolveType(dbType string, value []byte) (any, error)
+	}
 
-	Driver database.DbDriver
-}
+	Column struct {
+		Name     string
+		ScanType reflect.Type
+		DbType   string
+	}
 
-func (dt *DataTable) NumColumns() int {
+	Row struct {
+		Values []any
+	}
+
+	Table struct {
+		columns []Column
+		rows    []Row
+
+		Resolver Resolver
+	}
+)
+
+func (dt *Table) NumColumns() int {
 	return len(dt.columns)
 }
 
-func (dt *DataTable) NumRows() int {
+func (dt *Table) NumRows() int {
 	return len(dt.rows)
 }
 
-func (dt *DataTable) Columns() []database.Column {
+func (dt *Table) Columns() []Column {
 	return dt.columns
 }
 
-func (dt *DataTable) Rows() []database.Row {
+func (dt *Table) Rows() []Row {
 	return dt.rows
 }
 
-func CreateDataTable(columns []database.Column, rows []database.Row) *DataTable {
-	return &DataTable{
+func CreateDataTable(columns []Column, rows []Row) Table {
+	return Table{
 		columns: columns,
 		rows:    rows,
 	}
 }
 
-func (dt *DataTable) GetRowColumn(row, column int) (string, error) { // Needs a lookielook to see if other drivers are at least similar to this
+func (dt *Table) GetRowColumn(row, column int) (string, error) { // Needs a lookielook to see if other drivers are at least similar to this
 	rowColumn := dt.rows[row].Values[column]
 	switch value := rowColumn.(type) {
 	case string, int, int32, int64, float32, float64, uint, bool:
@@ -47,10 +63,8 @@ func (dt *DataTable) GetRowColumn(row, column int) (string, error) { // Needs a 
 	case time.Time:
 		return fmt.Sprint(value.Format("2006-01-02 15:04:05.000000-07")), nil
 	case []byte:
-		logger.Info(dt.Driver, dt.columns, value)
-		resolved, err := dt.Driver.ResolveDatabaseType(dt.columns[column].DbType, value)
+		resolved, err := dt.Resolver.ResolveType(dt.columns[column].DbType, value)
 		if err != nil {
-			logger.Warn(err)
 			return "", err
 		} else {
 			return fmt.Sprintf("%v", resolved), nil
@@ -59,12 +73,11 @@ func (dt *DataTable) GetRowColumn(row, column int) (string, error) { // Needs a 
 		return "null", nil
 	default:
 		err := fmt.Errorf("unknown value type %T for %s", value, dt.columns[column].DbType)
-		logger.Warn(err)
 		return "", err
 	}
 }
 
-func (dt *DataTable) GetRowStringsAll() [][]string {
+func (dt *Table) GetRowStringsAll() [][]string {
 	rows := make([][]string, len(dt.columns))
 	for i := range dt.NumRows() {
 		rows[i] = dt.GetRowStrings(i)
@@ -73,7 +86,7 @@ func (dt *DataTable) GetRowStringsAll() [][]string {
 	return rows
 }
 
-func (dt *DataTable) GetRowStrings(index int) []string {
+func (dt *Table) GetRowStrings(index int) []string {
 	row := make([]string, len(dt.columns))
 	for columnIndex := range dt.columns {
 		value, err := dt.GetRowColumn(index, columnIndex)
@@ -86,12 +99,12 @@ func (dt *DataTable) GetRowStrings(index int) []string {
 	return row
 }
 
-func (dt *DataTable) GetRowString(index int) string {
+func (dt *Table) GetRowString(index int) string {
 	row := dt.GetRowStrings(index)
 	return strings.Join(row, " | ")
 }
 
-func (dt *DataTable) GetColumnRows(columnIndex int) (rows []string, columnWidth int) {
+func (dt *Table) GetColumnRows(columnIndex int) (rows []string, columnWidth int) {
 	columnRows := make([]string, dt.NumRows())
 	for rowIndex := range dt.rows {
 		value, err := dt.GetRowColumn(rowIndex, columnIndex)
@@ -106,32 +119,32 @@ func (dt *DataTable) GetColumnRows(columnIndex int) (rows []string, columnWidth 
 	return columnRows, columnWidth
 }
 
-func (dt *DataTable) ColumnSlices() (names []string, types []string, dbTypes []string) {
+func (dt *Table) ColumnSlices() (names []string, types []string, dbTypes []string) {
 	names = dt.ColumnNames()
 	types = dt.ColumnTypeStrings()
 	dbTypes = dt.ColumnDatabaseTypeStrings()
 	return
 }
 
-func (dt *DataTable) ColumnNames() []string {
-	return shared.SliceTransform(dt.columns, func(col database.Column) string {
+func (dt *Table) ColumnNames() []string {
+	return shared.SliceTransform(dt.columns, func(col Column) string {
 		return col.Name
 	})
 }
 
-func (dt *DataTable) ColumnTypeStrings() []string {
-	return shared.SliceTransform(dt.columns, func(col database.Column) string {
+func (dt *Table) ColumnTypeStrings() []string {
+	return shared.SliceTransform(dt.columns, func(col Column) string {
 		return col.ScanType.Kind().String()
 	})
 }
 
-func (dt *DataTable) ColumnDatabaseTypeStrings() []string {
-	return shared.SliceTransform(dt.columns, func(col database.Column) string {
+func (dt *Table) ColumnDatabaseTypeStrings() []string {
+	return shared.SliceTransform(dt.columns, func(col Column) string {
 		return col.DbType
 	})
 }
 
-func (dt *DataTable) ClearRows() error {
-	dt.rows = make([]database.Row, 0)
+func (dt *Table) ClearRows() error {
+	dt.rows = make([]Row, 0)
 	return nil
 }

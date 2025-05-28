@@ -7,19 +7,13 @@ import (
 
 var logger = logging.NewLogger("widgets.log")
 
-const (
-	PanelWidthRatio       int = 6
-	BorderThickness       int = 1
-	BorderThicknessDouble int = 2
-)
-
 type Kind int
 
 const (
 	KindPanel Kind = iota
 	KindWorkspace
 	KindHelp
-	KindCommandLine
+	KindPrompt
 
 	KindPopupHandler
 	KindQueryOptions
@@ -36,7 +30,7 @@ func ChangeFocus(id Kind) tea.Cmd {
 
 type (
 	WidgetNames struct {
-		Command   string
+		Prompt    string
 		Workspace string
 		Panel     string
 		Help      string
@@ -52,7 +46,7 @@ type (
 )
 
 var Widgets = WidgetNames{
-	Command:   "Command",
+	Prompt:    "Prompt",
 	Panel:     "Panel",
 	Workspace: "Workspace",
 
