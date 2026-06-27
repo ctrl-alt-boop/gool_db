@@ -24,10 +24,10 @@ func (c Connection) String() string {
 
 var SavedConfigs map[string]datasource.Namer = map[string]datasource.Namer{
 	"postgres_win": dsn.PostgresDSN(
-		dsn.PostgresAddr("172.24.208.1"),
+		dsn.PostgresAddr(""),
 		dsn.PostgresPort(5432),
-		dsn.PostgresUsername("valmatics"),
-		dsn.PostgresPassword("valmatics"),
+		dsn.PostgresUsername(""),
+		dsn.PostgresPassword(""),
 		dsn.PostgresSSLMode(dsn.SSLModeDisable),
 	),
 	"postgres_local": dsn.PostgresDSN(
