@@ -29,15 +29,15 @@ func TestClient(t *testing.T) {
 
 	client := dribble.NewClient()
 
-	valmaticsUsr := os.Getenv("DB_VALMATICS_USER")
-	valmaticsPwd := os.Getenv("DB_VALMATICS_PWD")
+	tUsr := os.Getenv("DB_T_USER")
+	tPwd := os.Getenv("DB_T_PWD")
 
 	postgresTarget, err := target.New("postgres", dsn.PostgresDSN(
 		dsn.PostgresAddr("localhost"),
 		dsn.PostgresPort(5432),
-		dsn.PostgresDBName("valmatics"),
-		dsn.PostgresUsername(valmaticsUsr),
-		dsn.PostgresPassword(valmaticsPwd),
+		dsn.PostgresDBName("tdb"),
+		dsn.PostgresUsername(tUsr),
+		dsn.PostgresPassword(tPwd),
 		dsn.PostgresSSLMode(dsn.SSLModeDisable),
 	))
 	if err != nil {
